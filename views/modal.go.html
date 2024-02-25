@@ -1,0 +1,28 @@
+<div class="modal fade" id="modalAddTS" tabindex="-1" role="dialog" aria-labelledby="modalAddTSTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Добавить magnet в TorrServer</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="hostts" class="col-form-label">Адрес TorrServer:</label>
+                        <input type="text" class="form-control" id="hostts">
+                    </div>
+                    <div class="form-group">
+                        <label for="magnet-text" class="col-form-label">Magnet:</label>
+                        <textarea class="form-control" id="magnet-text"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="addMagnetTS()">Добавить</button>
+            </div>
+        </div>
+    </div>
+</div>

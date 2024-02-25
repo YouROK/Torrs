@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+
+<head>
+    {{template "head.go.html"}}
+</head>
+
+<body>
+{{template "jslinks.go.html"}}
+{{template "metrica.go.html" .}}
+
+<div style="max-width: 980px;padding-bottom: 56px" class="container-sm">
+    <p style="margin-bottom: 25px;text-align: center">{{if eq . "debug"}}debug mode{{end}}</p>
+    <div class="row align-items-center">
+        <div class="col w-100 text-md-start text-left text-truncate">
+            <div class="form-floating">
+                <input id="query" type="text" class="form-control" placeholder="Введите название фильма или сериала для поиска">
+                <label for="query">Введите название фильма или сериала для поиска</label>
+            </div>
+        </div>
+        <div class="col-md-auto" style="padding: 10px">
+            <button id="btn-search" type="button" class="btn btn-lg btn-outline-success w-100" title="Поиск" onclick="search()">
+                <i id="ico-search" class="bi bi-search"></i>
+                <span id="spin-search" style="display: none" class="spinner-border spinner-border-sm" role="status"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="row justify-content-between">
+        <div id="sort" class="btn-group col-md-auto" role="group" style="padding-top: 5px">
+            <input sorttorr="pir" type="radio" class="btn-check" name="btnradio" id="btn-sort-pir" autocomplete="off">
+            <label class="btn btn-outline-primary btn-lg" for="btn-sort-pir">По пирам</label>
+
+            <input sorttorr="size" type="radio" class="btn-check" name="btnradio" id="btn-sort-size" autocomplete="off"
+                   checked>
+            <label class="btn btn-outline-primary btn-lg" for="btn-sort-size">По Размеру</label>
+
+            <input sorttorr="date" type="radio" class="btn-check" name="btnradio" id="btn-sort-date" autocomplete="off">
+            <label class="btn btn-outline-primary btn-lg" for="btn-sort-date">По Дате</label>
+        </div>
+        <div class="col-md-auto" style="padding-top: 5px">
+            <input type="checkbox" class="btn-check" id="btn-accurate" checked autocomplete="off">
+            <label class="btn btn-outline-secondary btn-lg" for="btn-accurate">Точный поиск</label>
+        </div>
+    </div>
+
+    <div id="status"></div>
+    <p></p>
+    <div id="torrs" style="margin-top: 50px"></div>
+
+    {{template "toast.go.html"}}
+
+</div>
+
+{{template "bottom.go.html" .}}
+
+{{template "modal.go.html" .}}
+
+<script>
+    var clipboard = new Clipboard('.copy-link');
+    var torrents = undefined;
+    const content = $('#torrs')
+    var tshost = "";
+
+    $(window).ready(function () {
+        let accurate = localStorage.getItem("accuratesearch");
+        if (accurate === "false")
+            $("#btn-accurate").attr('checked', false);
+        let query = localStorage.getItem("searchquery");
+        if (query) {
+            $("#query").val(query);
+            search();
+        }
+        tshost = localStorage.getItem("tshost");
+    });
+
+    $(document).on('change', 'input:radio[id^="btn-sort-"]', function (event) {
+        buildTorrents();
+    });
+
+    function openTSDialog(magnet) {
+        $("#magnet-text").val(magnet.trim());
+        $("#hostts").val(tshost);
+        $('#modalAddTS').modal('show');
+    }
+
+    function addMagnetTS() {
+        tshost = $("#hostts").val();
+        const magnet = $("#magnet-text").val();
+        localStorage.setItem("tshost", tshost);
+        var data = {
+            "action": "add",
+            "link": magnet,
+            "save_to_db": true,
+        };
+        var url = tshost+"/torrents";
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: JSON.stringify(data),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function(response) {
+                toast("Magnet добавлен");
+            },
+            error: function(xhr, status, error) {
+                toast("Произошла ошибка при добавлении: "+xhr.responseText||error||status);
+            }
+        });
+    }
+
+    function toast(msg) {
+        $("#toastBody").text(msg);
+        $("#toast").toast("show");
+    }
+
+    function search() {
+        let query = $("#query").val();
+        if (!query) {
+            toast("Введите название фильма или сериала для поиска");
+            return
+        }
+
+        let accurate = $("#btn-accurate").is(':checked');
+
+        localStorage.setItem("searchquery", query);
+        localStorage.setItem("accuratesearch", accurate);
+
+        $('#btn-search').prop('disabled', true);
+        $('#ico-search').hide();
+        $('#spin-search').show();
+        var accStr = ""
+        if (accurate)
+            accStr = "&accurate"
+        $.get("/search?query=" + query + accStr).done(function (data) {
+            torrents = JSON.parse(data);
+            if (!torrents) {
+                toast("Ничего не найдено");
+                return;
+            }
+            torrents.forEach(function (elem) {
+                let date = new Date(elem.createTime)
+                elem.date = date.getTime()
+                elem.dateHuman = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2)
+            });
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            toast(jqXHR.responseText);
+        }).always(function () {
+            $('#btn-search').prop('disabled', false);
+            $('#ico-search').show();
+            $('#spin-search').hide();
+            buildTorrents();
+        });
+    }
+
+    document.getElementById("query").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            search();
+        }
+    });
+
+    $('.copy-link').on('click', function (event) {
+        let element = this;
+        $(element).find("i").removeClass("bi-clipboard").addClass("bi-check2");
+        setTimeout(function () {
+            $(element).find("i").removeClass("bi-check2").addClass("bi-clipboard");
+        }, 1000);
+    });
+
+    function buildTorrents() {
+        content.empty();
+        const key = $('#sort input:radio:checked').attr("sorttorr");
+
+        if (torrents)
+            $("#status").html(`<h5 class="text-muted" style="margin-top: 10px">Найдено торрентов: ${torrents.length}</h5>`);
+        else
+            $("#status").html("");
+
+        torrents.sort((c, b) => {
+            if (c[key] < b[key]) return 1
+            if (c[key] > b[key]) return -1
+            return 0
+        });
+
+        torrents.forEach(function (elem) {
+            const item = $(`<div class="card">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">${elem.title}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted" style="margin-top: 5px">
+                        <a target="_blank" href="${elem.url}" style="text-decoration: none">
+                            <img style="margin-bottom: 3px" width="16" src="/img/ico/${elem.trackerName}.ico" alt="${elem.trackerName}">
+                            <span>&nbsp;${elem.trackerName}</span>
+                        </a>
+                    </h6>
+                    <p class="card-text">
+                        <span>
+                            <a href="${elem.magnet}" target="_blank" style="text-decoration: none">
+                                <img width="16px" src="/img/magnet.svg">
+                            </a>&nbsp;
+                        </span>
+                        <span class="copy-link" data-clipboard-text="${elem.magnet}" onclick="toast('Магнет ссылка скопирована')">
+                            <img style="margin-bottom: 3px" width="16" src="/img/copy.svg">&nbsp;
+                        </span>
+                        <span onclick="openTSDialog('${elem.magnet}')">
+                            <img style="margin-bottom: 3px" width="16" src="/img/plus.svg">&nbsp;
+                        </span>
+                        <span> ${elem.sizeName} </span>&nbsp;
+                        <span>${elem.dateHuman} </span>&nbsp;
+                        <span>⬆ ${elem.sid || 0} </span>&nbsp;
+                        <span>⬇ ${elem.pir || 0} </span>&nbsp;
+                    </p>
+                </div>
+            </div><p></p>`);
+            content.append(item);
+        });
+    }
+
+</script>
+</body>
+
+</html>
