@@ -23,7 +23,7 @@ func TMDBAPI(c *gin.Context) {
 
 	defer res.Body.Close()
 
-	c.Header("Cache-Control", "public, max-age=3600")
+	c.Header("Cache-Control", "public, max-age=604800") //1 week
 	c.Header("Etag", res.Header.Get("Etag"))
 	c.DataFromReader(res.StatusCode, res.ContentLength, "application/javascript; charset=utf-8", res.Body, nil)
 }
@@ -45,7 +45,7 @@ func TMDBIMG(c *gin.Context) {
 
 	defer res.Body.Close()
 
-	c.Header("Cache-Control", "public, max-age=3600")
+	c.Header("Cache-Control", "public, max-age=604800") //1 week
 	c.Header("Etag", res.Header.Get("Etag"))
 	c.DataFromReader(res.StatusCode, res.ContentLength, res.Header.Get("Content-Type"), res.Body, nil)
 }
