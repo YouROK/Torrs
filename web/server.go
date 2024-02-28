@@ -17,15 +17,17 @@ func Start() {
 
 	//gin.SetMode(gin.DebugMode)
 	//gin.SetMode(gin.ReleaseMode)
-
-	global.Route = gin.Default()
+	global.Route = gin.New()
 	global.Route.Use(gin.Recovery())
 	static.RouteStaticFiles(global.Route)
 	global.Route.LoadHTMLGlob(filepath.Join(global.PWD, "views/*.go.html"))
 	api.SetRoutes(global.Route)
 
 	if gin.Mode() == gin.DebugMode {
-		global.Route.Run(":80")
+		err := global.Route.Run(":80")
+		if err != nil {
+			log.Println("Error start server:", err)
+		}
 	} else {
 		am := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
