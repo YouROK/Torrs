@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,5 +18,13 @@ func main() {
 	global.PWD = pwd
 	sync.Init()
 	search.UpdateIndex()
-	web.Start()
+
+	port := flag.String("port", "8093", "port for web")
+
+	if port == nil {
+		p := "8093"
+		port = &p
+	}
+
+	web.Start(*port)
 }
