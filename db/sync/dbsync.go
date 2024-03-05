@@ -2,7 +2,6 @@ package sync
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -42,30 +41,27 @@ func syncDB() {
 		//log.Println("Get:", ftstr)
 		resp, err := http.Get("http://85.17.54.98:9117/sync/fdb/torrents?time=" + ftstr)
 		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		buf, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		var js *fdb.FDBRequest
-		err = json.Unmarshal(buf, &js)
-		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error connect to fdb:", err)
 			return
 		}
 
+		var js *fdb.FDBRequest
+		err = json.NewDecoder(resp.Body).Decode(&js)
+		if err != nil {
+			log.Fatal("Error decode json:", err)
+			return
+		}
+		resp.Body.Close()
+
 		err = saveTorrent(js.Collections)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error save torrents:", err)
 			return
 		}
 
 		err = SetFileTime(filetime)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error set ftime:", err)
 			return
 		}
 		log.Println("Save:", ftstr)
@@ -79,6 +75,7 @@ func syncDB() {
 				filetime = col.Value.FileTime
 			}
 		}
+		js = nil
 	}
 }
 
