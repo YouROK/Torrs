@@ -1,0 +1,20 @@
+[Unit]
+Description = Torrs
+After = syslog.target network.target nss-lookup.target
+
+[Service]
+Environment=GIN_MODE=release
+Type = simple
+ExecStart = /opt/torrs/torrs
+ExecReload = /bin/kill -HUP ${MAINPID}
+ExecStop = /bin/kill -INT ${MAINPID}
+TimeoutSec = 30
+Restart = on-failure
+LimitAS=infinity
+LimitRSS=infinity
+LimitCORE=infinity
+LimitNOFILE=65536
+
+[Install]
+WantedBy = multi-user.target
+
