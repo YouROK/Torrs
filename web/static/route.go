@@ -243,41 +243,41 @@ func RouteStaticFiles(route *gin.Engine) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesjscryptbase64js))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/javascript; charset=utf-8", Filesjscryptbase64js)
+		c.Data(200, "text/javascript; charset=utf-8", Filesjscryptbase64js)
 	})
 
 	route.GET("/js/crypt/jsbn.js", func(c *gin.Context) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesjscryptjsbnjs))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/javascript; charset=utf-8", Filesjscryptjsbnjs)
+		c.Data(200, "text/javascript; charset=utf-8", Filesjscryptjsbnjs)
 	})
 
 	route.GET("/js/crypt/prng4.js", func(c *gin.Context) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesjscryptprng4js))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/javascript; charset=utf-8", Filesjscryptprng4js)
+		c.Data(200, "text/javascript; charset=utf-8", Filesjscryptprng4js)
 	})
 
 	route.GET("/js/crypt/rng.js", func(c *gin.Context) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesjscryptrngjs))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/javascript; charset=utf-8", Filesjscryptrngjs)
+		c.Data(200, "text/javascript; charset=utf-8", Filesjscryptrngjs)
 	})
 
 	route.GET("/js/crypt/rsa.js", func(c *gin.Context) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesjscryptrsajs))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/javascript; charset=utf-8", Filesjscryptrsajs)
+		c.Data(200, "text/javascript; charset=utf-8", Filesjscryptrsajs)
 	})
 
 	route.GET("/js/crypt/sha1.js", func(c *gin.Context) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesjscryptsha1js))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/javascript; charset=utf-8", Filesjscryptsha1js)
+		c.Data(200, "text/javascript; charset=utf-8", Filesjscryptsha1js)
 	})
 }

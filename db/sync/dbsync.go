@@ -39,7 +39,7 @@ func syncDB() {
 	for {
 		ftstr := strconv.FormatInt(filetime, 10)
 		//log.Println("Get:", ftstr)
-		resp, err := http.Get("http://85.17.54.98:9117/sync/fdb/torrents?time=" + ftstr)
+		resp, err := http.Get("http://62.112.8.193:9117/sync/fdb/torrents?time=" + ftstr)
 		if err != nil {
 			log.Fatal("Error connect to fdb:", err)
 			return

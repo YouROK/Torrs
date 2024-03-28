@@ -19,10 +19,10 @@ func main() {
 	sync.Init()
 	search.UpdateIndex()
 
-	port := flag.String("port", "8093", "port for web")
+	port := flag.String("port", "8094", "port for web")
 
 	if port == nil {
-		p := "8093"
+		p := "8094"
 		port = &p
 	}
 
