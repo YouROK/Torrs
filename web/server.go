@@ -4,7 +4,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
+	"net/http"
 	"path/filepath"
+	"strings"
 	"torrsru/db/sync"
 	"torrsru/web/api"
 	"torrsru/web/global"
@@ -15,14 +17,14 @@ func Start(port string) {
 	go sync.StartSync()
 
 	//gin.SetMode(gin.DebugMode)
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	corsCfg := cors.DefaultConfig()
 	corsCfg.AllowAllOrigins = true
 	corsCfg.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "X-Requested-With", "Accept", "Authorization"}
 
 	global.Route = gin.New()
-	global.Route.Use(gin.Recovery(), cors.New(corsCfg))
+	global.Route.Use(gin.Recovery(), cors.New(corsCfg), blockUsers())
 	static.RouteStaticFiles(global.Route)
 	global.Route.LoadHTMLGlob(filepath.Join(global.PWD, "views/*.go.html"))
 	api.SetRoutes(global.Route)
@@ -32,23 +34,26 @@ func Start(port string) {
 		log.Println("Error start server:", err)
 	}
 
-	//if gin.Mode() == gin.DebugMode {
-	//	err := global.Route.Run(":80")
-	//	if err != nil {
-	//		log.Println("Error start server:", err)
-	//	}
-	//} else {
-	//	am := autocert.Manager{
-	//		Prompt:     autocert.AcceptTOS,
-	//		HostPolicy: autocert.HostWhitelist("torrs.ru"),
-	//		Cache:      autocert.DirCache(filepath.Join(global.PWD, "cache")),
-	//	}
-	//
-	//	err := gincert.RunWithManager(global.Route, &am)
-	//	if err != nil {
-	//		log.Println("Error start server:", err)
-	//	}
-	//}
-
 	global.Stoped = true
+}
+
+func blockUsers() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		referer := strings.ToLower(c.Request.Referer())
+		useragent := strings.ToLower(c.Request.UserAgent())
+
+		if strings.Contains(referer, "lampishe") || strings.Contains(useragent, "lampishe") {
+			if strings.Contains(c.Request.RequestURI, "/tmdbimg/") {
+				c.Redirect(http.StatusMovedPermanently, "http://releases.yourok.ru/torr/fake.png")
+				return
+			}
+
+			if strings.Contains(c.Request.RequestURI, "/tmdb/") {
+				c.Request.RequestURI = strings.ReplaceAll(c.Request.RequestURI, "language=ru", "language=bg")
+				c.Request.RequestURI = strings.ReplaceAll(c.Request.RequestURI, "language=ua", "language=bg")
+			}
+		}
+
+		c.Next()
+	}
 }
