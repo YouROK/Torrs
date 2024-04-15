@@ -78,8 +78,9 @@
         buildTorrents();
     });
 
-    function openTSDialog(magnet) {
+    function openTSDialog(magnet,title) {
         $("#magnet-text").val(magnet.trim());
+        $("#title-label").text(title.trim());
         $("#hostts").val(tshost);
         $('#modalAddTS').modal('show');
     }
@@ -87,11 +88,14 @@
     function addMagnetTS() {
         tshost = $("#hostts").val();
         const magnet = $("#magnet-text").val();
+        const title = $("#title-label").text();
+
         localStorage.setItem("tshost", tshost);
         var data = {
             "action": "add",
             "link": magnet,
             "save_to_db": true,
+            "title":title,
         };
         var url = tshost+"/torrents";
         $.ajax({
@@ -202,7 +206,7 @@
                         <span class="copy-link" data-clipboard-text="${elem.magnet}" onclick="toast('Магнет ссылка скопирована')">
                             <img style="margin-bottom: 3px" width="16" src="/img/copy.svg">&nbsp;
                         </span>
-                        <span onclick="openTSDialog('${elem.magnet}')">
+                        <span onclick="openTSDialog('${elem.magnet}','${elem.title}')">
                             <img style="margin-bottom: 3px" width="16" src="/img/plus.svg">&nbsp;
                         </span>
                         <span> ${elem.sizeName} </span>&nbsp;
