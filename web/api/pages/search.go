@@ -8,11 +8,16 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"torrsru/db/search"
 )
 
 func Search(c *gin.Context) {
 	query := c.Query("query")
+	if strings.TrimSpace(query) == "" {
+		c.Status(http.StatusNoContent)
+		return
+	}
 	_, accurate := c.GetQuery("accurate")
 	trs := search.Find(query, accurate)
 	c.Header("Cache-Control", "public, max-age=3600")
