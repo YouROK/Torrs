@@ -4,9 +4,10 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
-	"net/http"
 	"path/filepath"
 	"strings"
+	ss "sync"
+	"time"
 	"torrsru/db/sync"
 	"torrsru/web/api"
 	"torrsru/web/global"
@@ -38,20 +39,17 @@ func Start(port string) {
 }
 
 func blockUsers() gin.HandlerFunc {
+	var mu ss.Mutex
 	return func(c *gin.Context) {
 		referer := strings.ToLower(c.Request.Referer())
 		useragent := strings.ToLower(c.Request.UserAgent())
 
-		if strings.Contains(referer, "lampishe") || strings.Contains(useragent, "lampishe") {
-			if strings.Contains(c.Request.RequestURI, "/tmdbimg/") {
-				c.Redirect(http.StatusMovedPermanently, "http://releases.yourok.ru/torr/fake.png")
-				return
-			}
-
-			if strings.Contains(c.Request.RequestURI, "/tmdb/") {
-				c.Request.RequestURI = strings.ReplaceAll(c.Request.RequestURI, "language=ru", "language=bg")
-				c.Request.RequestURI = strings.ReplaceAll(c.Request.RequestURI, "language=ua", "language=bg")
-			}
+		if strings.Contains(referer, "lampishe") || strings.Contains(useragent, "lampishe") || strings.Contains(referer, "lampa") || strings.Contains(useragent, "lampa") {
+			mu.Lock()
+			c.Next()
+			time.Sleep(time.Millisecond * 300)
+			mu.Unlock()
+			return
 		}
 
 		c.Next()
