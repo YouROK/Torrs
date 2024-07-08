@@ -161,7 +161,7 @@
             }
         })
 
-        seasons.sort().reverse()
+        seasons.sort((a, b) => a - b)
         quality.sort((a, b) => b - a)
 
         seasons.splice(0, 0, "Все")
