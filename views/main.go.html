@@ -44,6 +44,42 @@
         </div>
     </div>
 
+    <div class="row justify-content-between" id="filter">
+        <div class="col-md" style="padding-top: 5px">
+            <div class="form-group">
+                <label for="quality">Качество</label>
+                <select name="quality" class="form-control" id="quality">
+                </select>
+            </div>
+        </div>
+        <div class="col-md" style="padding-top: 5px">
+            <div class="form-group">
+                <label for="voice">Озвучка</label>
+                <select name="voice" class="form-control" id="voice">
+                </select>
+            </div>
+        </div>
+        <div class="col-md" style="padding-top: 5px">
+            <div class="form-group">
+                <label for="seasons">Сезоны</label>
+                <select name="seasons" class="form-control" id="seasons">
+                </select>
+            </div>
+        </div>
+        <div class="col-md" style="padding-top: 5px">
+            <div class="form-group">
+                <label for="tracker">Трекер</label>
+                <select name="tracker" class="form-control" id="tracker">
+                </select>
+            </div>
+        </div>
+        <div class="col-md align-self-end" style="padding-top: 5px">
+            <button id="btn-reset" type="button" class="btn btn-danger w-100" title="Сбросить" onclick="reset_filter()">
+                <span>Сбросить</span>
+            </button>
+        </div>
+    </div>
+
     <div id="status"></div>
     <p></p>
     <div id="torrs" style="margin-top: 50px"></div>
@@ -59,8 +95,16 @@
 <script>
     var clipboard = new Clipboard('.copy-link');
     var torrents = undefined;
+    var filtred = []
     const content = $('#torrs')
     var tshost = "";
+
+    let filter_search = {
+        voice: [],
+        tracker: []
+    }
+
+    const filtr = $('#filter');
 
     $(window).ready(function () {
         let accurate = localStorage.getItem("accuratesearch");
@@ -78,7 +122,111 @@
         buildTorrents();
     });
 
-    function openTSDialog(magnet,title) {
+    $('select', filtr).on('change', function () {
+        filter();
+        buildTorrents();
+    })
+
+    function reset_filter() {
+        $('[name="quality"],[name="tracker"],[name="voice"],[name="seasons"]', filtr).each(function () {
+            $(this).val($('option', this).eq(0).attr('value'));
+        });
+        filter();
+        buildTorrents();
+    }
+
+    function initFilter() {
+        filter_search.voice = ["Все"]
+        filter_search.tracker = ["Все"]
+        filter_search.seasons = ["Все"]
+
+        let seasons = []
+        let quality = []
+
+        torrents.forEach(element => {
+            if (element.voices && element.voices.length) {
+                element.voices.forEach(voice => {
+                    if (filter_search.voice.indexOf(voice) === -1) filter_search.voice.push(voice)
+                })
+            }
+
+            if (filter_search.tracker.indexOf(element.trackerName) === -1) filter_search.tracker.push(element.trackerName)
+
+            if (quality.indexOf(element.quality) === -1 && element.quality) quality.push(element.quality)
+
+            if (element.seasons && element.seasons.length) {
+                element.seasons.forEach(s => {
+                    if (seasons.indexOf(s) === -1 && s) seasons.push(s)
+                })
+            }
+        })
+
+        seasons.sort().reverse()
+        quality.sort((a, b) => b - a)
+
+        seasons.splice(0, 0, "Все")
+        quality.splice(0, 0, "Все")
+
+        filter_search.seasons = seasons
+        filter_search.quality = quality
+
+        const append = function (name, value) {
+            const select = $('[name="' + name + '"]', filtr)
+
+            value.forEach(v => {
+                select.append('<option value="' + v + '">' + v + '</option>')
+            })
+
+            select.val(value[0])
+        }
+
+        append('voice', filter_search.voice)
+        append('tracker', filter_search.tracker)
+        append('seasons', filter_search.seasons)
+        append('quality', filter_search.quality)
+    }
+
+    function filter() {
+        filtred = torrents.filter(element => {
+            let pass = false,
+                any = false,
+                nopass = false
+
+            const quality = $('[name="quality"]', filtr).val()
+            const tracker = $('[name="tracker"]', filtr).val()
+            const voice = $('[name="voice"]', filtr).val()
+            const seasons = $('[name="seasons"]', filtr).val()
+
+            if (quality !== "Все" || tracker !== "Все" || voice !== "Все" || seasons !== "Все") any = true;
+
+            if (quality !== "Все") {
+                if (element.quality == parseInt(quality)) pass = true
+                else nopass = true
+            }
+
+            if (tracker !== "Все") {
+                if (element.trackerName == tracker) pass = true
+                else nopass = true
+            }
+
+            if (voice !== "Все") {
+                if (element.voices.indexOf(voice) !== -1) pass = true
+                else nopass = true
+            }
+
+            if (seasons !== "Все") {
+                if (element.seasons.indexOf(parseInt(seasons)) !== -1) pass = true
+                else nopass = true
+            }
+
+            if (any) {
+                if (nopass) return false
+                else return pass
+            } else return true
+        })
+    }
+
+    function openTSDialog(magnet, title) {
         $("#magnet-text").val(magnet.trim());
         $("#title-label").text(title.trim());
         $("#hostts").val(tshost);
@@ -95,20 +243,20 @@
             "action": "add",
             "link": magnet,
             "save_to_db": true,
-            "title":title,
+            "title": title,
         };
-        var url = tshost+"/torrents";
+        var url = tshost + "/torrents";
         $.ajax({
             url: url,
             type: "POST",
             data: JSON.stringify(data),
             contentType: "application/json; charset=utf-8",
             dataType: "json",
-            success: function(response) {
+            success: function (response) {
                 toast("Magnet добавлен");
             },
-            error: function(xhr, status, error) {
-                toast("Произошла ошибка при добавлении: "+xhr.responseText||error||status);
+            error: function (xhr, status, error) {
+                toast("Произошла ошибка при добавлении: " + xhr.responseText || error || status);
             }
         });
     }
@@ -147,6 +295,8 @@
                 elem.date = date.getTime()
                 elem.dateHuman = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2)
             });
+            initFilter();
+            filter();
         }).fail(function (jqXHR, textStatus, errorThrown) {
             toast(jqXHR.responseText);
         }).always(function () {
@@ -177,17 +327,17 @@
         const key = $('#sort input:radio:checked').attr("sorttorr");
 
         if (torrents)
-            $("#status").html(`<h5 class="text-muted" style="margin-top: 10px">Найдено торрентов: ${torrents.length}</h5>`);
+            $("#status").html(`<h5 class="text-muted" style="margin-top: 10px">Найдено торрентов: ${torrents.length}    Показано торрентов: ${filtred.length}</h5>`);
         else
             $("#status").html("");
 
-        torrents.sort((c, b) => {
+        filtred.sort((c, b) => {
             if (c[key] < b[key]) return 1
             if (c[key] > b[key]) return -1
             return 0
         });
 
-        torrents.forEach(function (elem) {
+        filtred.forEach(function (elem) {
             const item = $(`<div class="card">
                 <div class="card-body">
                     <h5 class="card-title text-muted">${elem.title}</h5>
