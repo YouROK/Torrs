@@ -327,7 +327,7 @@
         const key = $('#sort input:radio:checked').attr("sorttorr");
 
         if (torrents)
-            $("#status").html(`<h5 class="text-muted" style="margin-top: 10px">Найдено торрентов: ${torrents.length}    Показано торрентов: ${filtred.length}</h5>`);
+            $("#status").html(`<h5 class="text-muted" style="margin-top: 10px">Найдено торрентов: ${filtred.length}/${torrents.length}</h5>`);
         else
             $("#status").html("");
 
