@@ -35,7 +35,7 @@ func Start(port string) {
 		log.Println("Error start server:", err)
 	}
 
-	global.Stoped = true
+	global.Stopped = true
 }
 
 func blockUsers() gin.HandlerFunc {
