@@ -3,30 +3,51 @@ package search
 import (
 	"github.com/agnivade/levenshtein"
 	"strings"
-	"time"
 	"torrsru/db/sync"
+	"torrsru/db/utils"
 	"torrsru/models/fdb"
-	"unicode"
+	"torrsru/web/global"
 )
 
 var (
-	isUpdate   bool
-	lastUpdate time.Time
-	index      map[string]struct{}
+	index map[string]struct{}
 )
 
-func SetUpdate() { isUpdate = true }
-
-func Find(query string, accurate bool) []*fdb.Torrent {
-	if lastUpdate.Add(time.Hour).Before(time.Now()) {
-		isUpdate = true
+func FindTitle(query string) []*fdb.Torrent {
+	list := sync.ListTitles()
+	find := []string{}
+	queryarr := strings.Split(query, " ")
+	for i := range queryarr {
+		queryarr[i] = utils.ClearStr(queryarr[i])
 	}
-	if isUpdate {
+	for _, s := range list {
+		isFound := true
+		for _, q := range queryarr {
+			if !strings.Contains(s, q) {
+				isFound = false
+				break
+			}
+		}
+		if isFound {
+			find = append(find, s)
+		}
+	}
+
+	ret := []*fdb.Torrent{}
+	for _, t := range find {
+		torrs := sync.GetTorrentsByTitle(t)
+		ret = append(ret, torrs...)
+	}
+	return ret
+}
+
+func FindName(query string, accurate bool) []*fdb.Torrent {
+	if global.IsUpdateIndex {
 		UpdateIndex()
 	}
 
 	listRes := map[string]bool{}
-	query = cleanString(query)
+	query = utils.ClearStr(query)
 	for s, _ := range index {
 		if strings.Contains(s, query) {
 			listRes[s] = true
@@ -61,7 +82,7 @@ func Find(query string, accurate bool) []*fdb.Torrent {
 	var listTorr []*fdb.Torrent
 	for s, b := range listRes {
 		if b {
-			trs := sync.GetTorrents(s)
+			trs := sync.GetTorrentsByName(s)
 			listTorr = append(listTorr, trs...)
 		}
 	}
@@ -74,16 +95,5 @@ func UpdateIndex() {
 	for _, s := range list {
 		index[s] = struct{}{}
 	}
-	lastUpdate = time.Now()
-	isUpdate = false
-}
-
-func cleanString(input string) string {
-	var cleaned string
-	for _, char := range input {
-		if unicode.IsLetter(char) || unicode.IsDigit(char) {
-			cleaned += string(char)
-		}
-	}
-	return strings.ToLower(cleaned)
+	global.IsUpdateIndex = false
 }

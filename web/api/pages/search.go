@@ -9,21 +9,31 @@ import (
 	"net/http"
 	"strconv"
 	"torrsru/db/search"
+	"torrsru/models/fdb"
 )
 
 func Search(c *gin.Context) {
 	query := c.Query("query")
 	_, accurate := c.GetQuery("accurate")
-	trs := search.Find(query, accurate)
-	c.Header("Cache-Control", "public, max-age=3600")
+	_, byword := c.GetQuery("byword")
+	var trs []*fdb.Torrent
+	if byword {
+		trs = search.FindTitle(query)
+	} else {
+		trs = search.FindName(query, accurate)
+	}
+
 	buf, err := json.Marshal(trs)
 	if err != nil {
 		log.Println("Error marshal torr list:", err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	estr := query + strconv.Itoa(len(trs))
-	etag := fmt.Sprintf("%x", md5.Sum([]byte(estr)))
-	c.Header("ETag", etag)
+	if gin.Mode() == gin.ReleaseMode {
+		estr := query + strconv.Itoa(len(trs))
+		etag := fmt.Sprintf("%x", md5.Sum([]byte(estr)))
+		c.Header("ETag", etag)
+		c.Header("Cache-Control", "public, max-age=3600")
+	}
 	c.Data(200, "application/javascript; charset=utf-8", buf)
 }

@@ -2,8 +2,10 @@ package sync
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,7 +20,7 @@ var (
 )
 
 func StartSync() {
-	for !global.Stoped {
+	for !global.Stopped {
 		syncDB()
 		time.Sleep(time.Minute * 20)
 	}
@@ -34,11 +36,14 @@ func syncDB() {
 	defer func() { isSync = false }()
 
 	filetime := GetFileTime()
+	lastft := filetime
 
 	mu.Unlock()
+	start := time.Now()
+	gcCount := 0
 	for {
 		ftstr := strconv.FormatInt(filetime, 10)
-		//log.Println("Get:", ftstr)
+		log.Println("Fetch:", ftstr)
 		resp, err := http.Get("http://62.112.8.193:9117/sync/fdb/torrents?time=" + ftstr)
 		if err != nil {
 			log.Fatal("Error connect to fdb:", err)
@@ -64,19 +69,32 @@ func syncDB() {
 			log.Fatal("Error set ftime:", err)
 			return
 		}
-		log.Println("Save:", ftstr)
 
-		if !js.Nextread {
-			break
-		}
-
+		torrents := 0
 		for _, col := range js.Collections {
 			if col.Value.FileTime > filetime {
 				filetime = col.Value.FileTime
 			}
+			torrents += len(col.Value.Torrents)
+		}
+
+		t := time.Unix(ft2sec(filetime), 0)
+		log.Println("Save:", t.Format("2006-01-02 15:04:05"), ", Torrents:", torrents)
+
+		if !js.Nextread {
+			break
 		}
 		js = nil
+		gcCount++
+		if gcCount > 10 {
+			runtime.GC()
+			gcCount = 0
+		}
 	}
+	if lastft != filetime {
+		global.IsUpdateIndex = true
+	}
+	fmt.Println("End sync", time.Since(start))
 }
 
 func getHash(magnet string) string {
@@ -90,4 +108,10 @@ func getHash(magnet string) string {
 		return strings.ToLower(magnet)
 	}
 	return strings.ToLower(magnet[:pos])
+}
+
+func ft2sec(ft int64) int64 {
+	//#define TICKS_PER_SECOND 10000000
+	//#define EPOCH_DIFFERENCE 11644473600LL
+	return ft/10000000 - 11644473600
 }

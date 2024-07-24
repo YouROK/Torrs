@@ -7,6 +7,7 @@ import (
 	"log"
 	"path/filepath"
 	"time"
+	"torrsru/db/utils"
 	"torrsru/models/fdb"
 	"torrsru/web/global"
 )
@@ -74,7 +75,30 @@ func ListNames() []string {
 	return ret
 }
 
-func GetTorrents(name string) []*fdb.Torrent {
+func ListTitles() []string {
+	var ret []string
+	err := db.View(func(tx *bolt.Tx) error {
+		torrsb := tx.Bucket([]byte("Indexes"))
+		if torrsb == nil {
+			return nil
+		}
+		torrsb = torrsb.Bucket([]byte("ByTitle"))
+		if torrsb == nil {
+			return nil
+		}
+		return torrsb.ForEach(func(k, v []byte) error {
+			ret = append(ret, string(k))
+			return nil
+		})
+	})
+	if err != nil {
+		log.Println("Error get from db:", err)
+	}
+
+	return ret
+}
+
+func GetTorrentsByName(name string) []*fdb.Torrent {
 	var ret []*fdb.Torrent
 	err := db.View(func(tx *bolt.Tx) error {
 		torrsb := tx.Bucket([]byte("Torrents"))
@@ -103,9 +127,60 @@ func GetTorrents(name string) []*fdb.Torrent {
 	return ret
 }
 
+func GetTorrentsByTitle(title string) []*fdb.Torrent {
+	var ret []*fdb.Torrent
+	index := map[string]string{}
+	err := db.View(func(tx *bolt.Tx) error {
+		torrsb := tx.Bucket([]byte("Indexes"))
+		if torrsb == nil {
+			return nil
+		}
+		torrsb = torrsb.Bucket([]byte("ByTitle"))
+		if torrsb == nil {
+			return nil
+		}
+
+		tr := torrsb.Bucket([]byte(title))
+		if tr != nil {
+			tr.ForEach(func(name, hash []byte) error {
+				index[string(hash)] = string(name)
+				return nil
+			})
+		}
+		return nil
+	})
+
+	if err == nil {
+		for hash, name := range index {
+			torrs := GetTorrentsByName(name)
+			for _, torr := range torrs {
+				if getHash(torr.Magnet) == hash {
+					ret = append(ret, torr)
+				}
+			}
+		}
+	}
+
+	if err != nil {
+		log.Println("Error get from db:", err)
+	}
+
+	return ret
+}
+
 func saveTorrent(cols []*fdb.Collection) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		torrsb, err := tx.CreateBucketIfNotExists([]byte("Torrents"))
+		if err != nil {
+			return err
+		}
+
+		index, err := tx.CreateBucketIfNotExists([]byte("Indexes"))
+		if err != nil {
+			return err
+		}
+
+		index, err = index.CreateBucketIfNotExists([]byte("ByTitle"))
 		if err != nil {
 			return err
 		}
@@ -116,6 +191,7 @@ func saveTorrent(cols []*fdb.Collection) error {
 				return err
 			}
 			for _, torr := range col.Value.Torrents {
+				//save torrent
 				hash := getHash(torr.Magnet)
 				if hash == "" {
 					continue
@@ -125,6 +201,16 @@ func saveTorrent(cols []*fdb.Collection) error {
 					return err
 				}
 				err = tnb.Put([]byte(hash), buf)
+				if err != nil {
+					return err
+				}
+				//create index
+				//index: torrent title->collection name->hash
+				titlid, err := index.CreateBucketIfNotExists([]byte(utils.ClearStr(torr.Title)))
+				if err != nil {
+					return err
+				}
+				err = titlid.Put([]byte(col.Key), []byte(hash))
 				if err != nil {
 					return err
 				}

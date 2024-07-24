@@ -42,6 +42,10 @@
             <input type="checkbox" class="btn-check" id="btn-accurate" checked autocomplete="off">
             <label class="btn btn-outline-secondary btn-lg" for="btn-accurate">Точный поиск</label>
         </div>
+        <div class="col-md-auto" style="padding-top: 5px">
+            <input type="checkbox" class="btn-check" id="btn-byword" checked autocomplete="off">
+            <label class="btn btn-outline-secondary btn-lg" for="btn-byword">По словам</label>
+        </div>
     </div>
 
     <div class="row justify-content-between" id="filter">
@@ -110,6 +114,11 @@
         let accurate = localStorage.getItem("accuratesearch");
         if (accurate === "false")
             $("#btn-accurate").attr('checked', false);
+
+        let byword = localStorage.getItem("bywordesearch");
+        if (byword === "false")
+            $("#btn-byword").attr('checked', false);
+
         let query = localStorage.getItem("searchquery");
         if (query) {
             $("#query").val(query);
@@ -274,9 +283,11 @@
         }
 
         let accurate = $("#btn-accurate").is(':checked');
+        let byword = $("#btn-byword").is(':checked');
 
         localStorage.setItem("searchquery", query);
         localStorage.setItem("accuratesearch", accurate);
+        localStorage.setItem("bywordsearch", byword);
 
         $('#btn-search').prop('disabled', true);
         $('#ico-search').hide();
@@ -284,6 +295,8 @@
         var accStr = ""
         if (accurate)
             accStr = "&accurate"
+        if(byword)
+            accStr = "&byword"
         $.get("/search?query=" + query + accStr).done(function (data) {
             torrents = JSON.parse(data);
             if (!torrents) {
