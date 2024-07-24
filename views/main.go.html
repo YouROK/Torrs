@@ -298,6 +298,7 @@
         if(byword)
             accStr = "&byword"
         $.get("/search?query=" + query + accStr).done(function (data) {
+            $('[name="tracker"],[name="voice"],[name="season"],[name="quality"]',filtr).empty()
             torrents = JSON.parse(data);
             if (!torrents) {
                 toast("Ничего не найдено");
