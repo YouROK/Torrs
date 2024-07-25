@@ -206,7 +206,7 @@ func saveTorrent(cols []*fdb.Collection) error {
 				}
 				//create index
 				//index: torrent title->collection name->hash
-				titlid, err := index.CreateBucketIfNotExists([]byte(utils.ClearStr(torr.Title)))
+				titlid, err := index.CreateBucketIfNotExists([]byte(utils.ClearStrSpace(torr.Title)))
 				if err != nil {
 					return err
 				}

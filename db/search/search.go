@@ -20,14 +20,21 @@ func FindTitle(query string) []*fdb.Torrent {
 	for i := range queryarr {
 		queryarr[i] = utils.ClearStr(queryarr[i])
 	}
+
 	for _, s := range list {
 		isFound := true
-		for _, q := range queryarr {
-			if !strings.Contains(s, q) {
+		found := map[string]bool{}
+		clearTitleArr := strings.Split(s, " ")
+		for _, t := range clearTitleArr {
+			found[t] = true
+		}
+		for _, s := range queryarr {
+			if !found[s] {
 				isFound = false
 				break
 			}
 		}
+
 		if isFound {
 			find = append(find, s)
 		}
