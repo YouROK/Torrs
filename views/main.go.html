@@ -31,20 +31,22 @@
             <input sorttorr="sid" type="radio" class="btn-check" name="btnradio" id="btn-sort-pir" autocomplete="off">
             <label class="btn btn-outline-primary btn-lg" for="btn-sort-pir">По пирам</label>
 
-            <input sorttorr="size" type="radio" class="btn-check" name="btnradio" id="btn-sort-size" autocomplete="off"
-                   checked>
+            <input sorttorr="size" type="radio" class="btn-check" name="btnradio" id="btn-sort-size" autocomplete="off" checked>
             <label class="btn btn-outline-primary btn-lg" for="btn-sort-size">По Размеру</label>
 
             <input sorttorr="date" type="radio" class="btn-check" name="btnradio" id="btn-sort-date" autocomplete="off">
             <label class="btn btn-outline-primary btn-lg" for="btn-sort-date">По Дате</label>
         </div>
-        <div class="col-md-auto" style="padding-top: 5px">
-            <input type="checkbox" class="btn-check" id="btn-accurate" checked autocomplete="off">
+        <div id="cont_accurate" class="col-md-auto" style="padding-top: 5px;display: none">
+            <input type="checkbox" class="btn-check" id="btn-accurate" autocomplete="off">
             <label class="btn btn-outline-secondary btn-lg" for="btn-accurate">Точный поиск</label>
         </div>
-        <div class="col-md-auto" style="padding-top: 5px">
-            <input type="checkbox" class="btn-check" id="btn-byword" checked autocomplete="off">
-            <label class="btn btn-outline-secondary btn-lg" for="btn-byword">По словам</label>
+        <div id="search_type" class="btn-group col-md-auto" role="group" style="padding-top: 5px">
+            <input type="radio" class="btn-check" id="btn-search-byword" name="btnradio" checked autocomplete="off">
+            <label class="btn btn-outline-secondary btn-lg" for="btn-search-byword">По словам</label>
+
+            <input type="radio" class="btn-check" id="btn-search-byname" name="btnradio" autocomplete="off">
+            <label class="btn btn-outline-secondary btn-lg" for="btn-search-byname">По названию</label>
         </div>
     </div>
 
@@ -111,14 +113,6 @@
     const filtr = $('#filter');
 
     $(window).ready(function () {
-        let accurate = localStorage.getItem("accuratesearch");
-        if (accurate === "false")
-            $("#btn-accurate").attr('checked', false);
-
-        let byword = localStorage.getItem("bywordesearch");
-        if (byword === "false")
-            $("#btn-byword").attr('checked', false);
-
         let query = localStorage.getItem("searchquery");
         if (query) {
             $("#query").val(query);
@@ -129,6 +123,13 @@
 
     $(document).on('change', 'input:radio[id^="btn-sort-"]', function (event) {
         buildTorrents();
+    });
+
+    $(document).on('change', 'input:radio[id^="btn-search-"]', function (event) {
+        if ($("#btn-search-byname").is(':checked'))
+            $("#cont_accurate").show();
+        else
+            $("#cont_accurate").hide();
     });
 
     $('select', filtr).on('change', function () {
@@ -283,10 +284,9 @@
         }
 
         let accurate = $("#btn-accurate").is(':checked');
-        let byword = $("#btn-byword").is(':checked');
+        let byword = $("#btn-search-byword").is(':checked');
 
         localStorage.setItem("searchquery", query);
-        localStorage.setItem("accuratesearch", accurate);
         localStorage.setItem("bywordsearch", byword);
 
         $('#btn-search').prop('disabled', true);
@@ -295,10 +295,10 @@
         var accStr = ""
         if (accurate)
             accStr = "&accurate"
-        if(byword)
+        if (byword)
             accStr = "&byword"
         $.get("/search?query=" + query + accStr).done(function (data) {
-            $('[name="tracker"],[name="voice"],[name="seasons"],[name="quality"]',filtr).empty()
+            $('[name="tracker"],[name="voice"],[name="seasons"],[name="quality"]', filtr).empty()
             torrents = JSON.parse(data);
             if (!torrents) {
                 toast("Ничего не найдено");
@@ -309,14 +309,15 @@
                 elem.date = date.getTime()
                 elem.dateHuman = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2)
             });
-            initFilter();
-            filter();
+            filtred = []
         }).fail(function (jqXHR, textStatus, errorThrown) {
             toast(jqXHR.responseText);
         }).always(function () {
             $('#btn-search').prop('disabled', false);
             $('#ico-search').show();
             $('#spin-search').hide();
+            initFilter();
+            filter();
             buildTorrents();
         });
     }

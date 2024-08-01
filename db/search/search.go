@@ -15,34 +15,30 @@ var (
 
 func FindTitle(query string) []*fdb.Torrent {
 	list := sync.ListTitles()
-	find := []string{}
-	queryarr := strings.Split(query, " ")
-	for i := range queryarr {
-		queryarr[i] = utils.ClearStr(queryarr[i])
-	}
+	queryarr := strings.Split(utils.ClearStrSpace(query), " ")
+	find := map[string]struct{}{}
 
-	for _, s := range list {
+	for _, name := range list {
 		isFound := true
-		found := map[string]bool{}
-		clearTitleArr := strings.Split(s, " ")
-		for _, t := range clearTitleArr {
-			found[t] = true
-		}
-		for _, s := range queryarr {
-			if !found[s] {
+		for _, q := range queryarr {
+			if !strings.Contains(name, q) {
 				isFound = false
 				break
 			}
 		}
 
 		if isFound {
-			find = append(find, s)
+			lastColon := strings.LastIndex(name, ":")
+			if lastColon != -1 {
+				name = name[:lastColon]
+			}
+			find[name] = struct{}{}
 		}
 	}
 
 	ret := []*fdb.Torrent{}
-	for _, t := range find {
-		torrs := sync.GetTorrentsByTitle(t)
+	for ind := range find {
+		torrs := sync.GetTorrentsByName(ind)
 		ret = append(ret, torrs...)
 	}
 	return ret

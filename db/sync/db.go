@@ -6,14 +6,15 @@ import (
 	bolt "go.etcd.io/bbolt"
 	"log"
 	"path/filepath"
+	"regexp"
 	"time"
-	"torrsru/db/utils"
 	"torrsru/models/fdb"
 	"torrsru/web/global"
 )
 
 var (
 	db *bolt.DB
+	re = regexp.MustCompile(`.+((19|20)\d\d)`)
 )
 
 func Init() {
@@ -127,46 +128,45 @@ func GetTorrentsByName(name string) []*fdb.Torrent {
 	return ret
 }
 
-func GetTorrentsByTitle(title string) []*fdb.Torrent {
-	var ret []*fdb.Torrent
-	index := map[string]string{}
-	err := db.View(func(tx *bolt.Tx) error {
-		torrsb := tx.Bucket([]byte("Indexes"))
-		if torrsb == nil {
-			return nil
-		}
-		torrsb = torrsb.Bucket([]byte("ByTitle"))
-		if torrsb == nil {
-			return nil
-		}
-
-		tr := torrsb.Bucket([]byte(title))
-		if tr != nil {
-			tr.ForEach(func(name, hash []byte) error {
-				index[string(hash)] = string(name)
-				return nil
-			})
-		}
-		return nil
-	})
-
-	if err == nil {
-		for hash, name := range index {
-			torrs := GetTorrentsByName(name)
-			for _, torr := range torrs {
-				if getHash(torr.Magnet) == hash {
-					ret = append(ret, torr)
-				}
-			}
-		}
-	}
-
-	if err != nil {
-		log.Println("Error get from db:", err)
-	}
-
-	return ret
-}
+//func Reindex() {
+//	db.Update(func(tx *bolt.Tx) error {
+//		tx.DeleteBucket([]byte("Indexes"))
+//		index, err := tx.CreateBucketIfNotExists([]byte("Indexes"))
+//		if err != nil {
+//			return err
+//		}
+//		index, err = index.CreateBucketIfNotExists([]byte("ByTitle"))
+//		if err != nil {
+//			return err
+//		}
+//
+//		torrsb := tx.Bucket([]byte("Torrents"))
+//		if torrsb == nil {
+//			return nil
+//		}
+//		return torrsb.ForEach(func(name, v []byte) error {
+//			collect := torrsb.Bucket(name)
+//			if collect != nil {
+//				collect.ForEach(func(hash, torr []byte) error {
+//					var t *fdb.Torrent
+//					err = json.Unmarshal(torr, &t)
+//					if err != nil {
+//						return err
+//					}
+//					match := re.FindStringSubmatch(t.Title)
+//					title := string(name) + ":" + match[1]
+//					fmt.Println(title, string(hash))
+//					indcollect, err := index.CreateBucketIfNotExists([]byte(title))
+//					if err != nil {
+//						return err
+//					}
+//					return indcollect.Put(hash, nil)
+//				})
+//			}
+//			return nil
+//		})
+//	})
+//}
 
 func saveTorrent(cols []*fdb.Collection) error {
 	return db.Update(func(tx *bolt.Tx) error {
@@ -205,12 +205,17 @@ func saveTorrent(cols []*fdb.Collection) error {
 					return err
 				}
 				//create index
-				//index: torrent title->collection name->hash
-				titlid, err := index.CreateBucketIfNotExists([]byte(utils.ClearStrSpace(torr.Title)))
-				if err != nil {
-					return err
+				//index: collection:year->hash
+
+				match := re.FindStringSubmatch(torr.Title)
+				name := ""
+				if len(match) > 1 {
+					name = col.Key + ":" + match[1]
+				} else {
+					log.Println("Not yaer in torrent:", torr.Title)
+					name = col.Key + ":"
 				}
-				err = titlid.Put([]byte(col.Key), []byte(hash))
+				err = index.Put([]byte(name), nil)
 				if err != nil {
 					return err
 				}
