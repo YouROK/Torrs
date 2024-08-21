@@ -8,12 +8,17 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"torrsru/db/search"
 	"torrsru/models/fdb"
 )
 
 func Search(c *gin.Context) {
 	query := c.Query("query")
+	if strings.TrimSpace(query) == "" {
+		c.Status(http.StatusNoContent)
+		return
+	}
 	_, accurate := c.GetQuery("accurate")
 	_, byword := c.GetQuery("byword")
 	var trs []*fdb.Torrent
