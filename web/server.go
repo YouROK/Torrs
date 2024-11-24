@@ -8,14 +8,14 @@ import (
 	"strings"
 	ss "sync"
 	"time"
-	"torrsru/db/sync"
+	"torrsru/db"
 	"torrsru/web/api"
 	"torrsru/web/global"
 	"torrsru/web/static"
 )
 
 func Start(port string) {
-	go sync.StartSync()
+	go db.StartSync()
 
 	//gin.SetMode(gin.DebugMode)
 	gin.SetMode(gin.ReleaseMode)
