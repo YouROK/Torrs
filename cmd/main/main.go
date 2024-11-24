@@ -5,8 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"torrsru/db/search"
-	"torrsru/db/sync"
+	"torrsru/db"
 	"torrsru/web"
 	"torrsru/web/global"
 )
@@ -16,8 +15,7 @@ func main() {
 	pwd, _ = filepath.Abs(pwd)
 	log.Println("PWD:", pwd)
 	global.PWD = pwd
-	sync.Init()
-	search.UpdateIndex()
+	db.Init()
 
 	port := flag.String("port", "8094", "port for web")
 
