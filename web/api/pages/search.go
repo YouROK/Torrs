@@ -8,19 +8,17 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"torrsru/db/search"
-	"torrsru/models/fdb"
+	"torrsru/db"
 )
 
 func Search(c *gin.Context) {
 	query := c.Query("query")
-	_, accurate := c.GetQuery("accurate")
-	_, byword := c.GetQuery("byword")
-	var trs []*fdb.Torrent
-	if byword {
-		trs = search.FindTitle(query)
-	} else {
-		trs = search.FindName(query, accurate)
+
+	trs, err := db.Search(query)
+	if err != nil {
+		log.Println("Error get from db list:", err)
+		c.Status(http.StatusInternalServerError)
+		return
 	}
 
 	buf, err := json.Marshal(trs)
