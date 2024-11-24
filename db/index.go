@@ -6,6 +6,7 @@ import (
 	"github.com/blevesearch/bleve"
 	bolt "go.etcd.io/bbolt"
 	"log"
+	"os"
 	"path/filepath"
 	"torrsru/models/fdb"
 	"torrsru/web/global"
@@ -27,6 +28,8 @@ func initIndex() error {
 
 func RebuildIndex() error {
 	var err error
+	index.Close()
+	os.RemoveAll(filepath.Join(global.PWD, "index.db"))
 	mappings := bleve.NewIndexMapping()
 	index, err = bleve.NewUsing(filepath.Join(global.PWD, "index.db"), mappings, "scorch", "scorch", nil)
 	if err != nil {
@@ -39,6 +42,7 @@ func RebuildIndex() error {
 		}
 
 		batch := index.NewBatch()
+		indexedTorrents := 0
 		err := torrsB.ForEach(func(uniTorr, _ []byte) error {
 			torrB := torrsB.Bucket(uniTorr)
 			if torrB == nil {
@@ -53,7 +57,8 @@ func RebuildIndex() error {
 					if err != nil {
 						return err
 					}
-					log.Println("Indexed torrents:", batch.Size())
+					indexedTorrents += batch.Size()
+					log.Println("Indexed torrents:", indexedTorrents)
 					batch = index.NewBatch()
 				} else {
 					err := batch.Index(hex.EncodeToString(uniTorr), title)
@@ -69,7 +74,8 @@ func RebuildIndex() error {
 			if err != nil {
 				return err
 			}
-			log.Println("Indexed torrents:", batch.Size())
+			indexedTorrents += batch.Size()
+			log.Println("Indexed torrents:", indexedTorrents)
 		}
 		return err
 	})
