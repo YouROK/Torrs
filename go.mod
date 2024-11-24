@@ -3,6 +3,7 @@ module torrsru
 go 1.22.0
 
 require (
+	github.com/alexflint/go-arg v1.5.1
 	github.com/blevesearch/bleve v1.0.14
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-gonic/gin v1.9.1
@@ -13,6 +14,7 @@ require (
 
 require (
 	github.com/RoaringBitmap/roaring v0.4.23 // indirect
+	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
 	github.com/blevesearch/mmap-go v1.0.2 // indirect
 	github.com/blevesearch/segment v0.9.0 // indirect
