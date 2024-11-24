@@ -1,4 +1,4 @@
-package sync
+package db
 
 import (
 	"encoding/json"
@@ -43,7 +43,8 @@ func syncDB() {
 	gcCount := 0
 	for {
 		ftstr := strconv.FormatInt(filetime, 10)
-		log.Println("Fetch:", ftstr)
+		t := time.Unix(ft2sec(filetime), 0)
+		log.Println("Fetch:", t.Format("2006-01-02 15:04:05"))
 		resp, err := http.Get("http://62.112.8.193:9117/sync/fdb/torrents?time=" + ftstr)
 		if err != nil {
 			log.Fatal("Error connect to fdb:", err)
@@ -58,15 +59,9 @@ func syncDB() {
 		}
 		resp.Body.Close()
 
-		err = saveTorrent(js.Collections)
+		err = saveTorrents(js.Collections)
 		if err != nil {
 			log.Fatal("Error save torrents:", err)
-			return
-		}
-
-		err = SetFileTime(filetime)
-		if err != nil {
-			log.Fatal("Error set ftime:", err)
 			return
 		}
 
@@ -78,7 +73,13 @@ func syncDB() {
 			torrents += len(col.Value.Torrents)
 		}
 
-		t := time.Unix(ft2sec(filetime), 0)
+		err = SetFileTime(filetime)
+		if err != nil {
+			log.Fatal("Error set ftime:", err)
+			return
+		}
+
+		t = time.Unix(ft2sec(filetime), 0)
 		log.Println("Save:", t.Format("2006-01-02 15:04:05"), ", Torrents:", torrents)
 
 		if !js.Nextread {
