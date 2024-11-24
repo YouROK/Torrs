@@ -37,17 +37,6 @@
             <input sorttorr="date" type="radio" class="btn-check" name="btnradio" id="btn-sort-date" autocomplete="off">
             <label class="btn btn-outline-primary btn-lg" for="btn-sort-date">По Дате</label>
         </div>
-        <div id="cont_accurate" class="col-md-auto" style="padding-top: 5px;display: none">
-            <input type="checkbox" class="btn-check" id="btn-accurate" autocomplete="off">
-            <label class="btn btn-outline-secondary btn-lg" for="btn-accurate">Точный поиск</label>
-        </div>
-        <div id="search_type" class="btn-group col-md-auto" role="group" style="padding-top: 5px">
-            <input type="radio" class="btn-check" id="btn-search-byword" name="btnradio_search" checked autocomplete="off">
-            <label class="btn btn-outline-secondary btn-lg" for="btn-search-byword">По словам</label>
-
-            <input type="radio" class="btn-check" id="btn-search-byname" name="btnradio_search" autocomplete="off">
-            <label class="btn btn-outline-secondary btn-lg" for="btn-search-byname">По названию</label>
-        </div>
     </div>
 
     <div class="row justify-content-between" id="filter">
@@ -123,13 +112,6 @@
 
     $(document).on('change', 'input:radio[id^="btn-sort-"]', function (event) {
         buildTorrents();
-    });
-
-    $(document).on('change', 'input:radio[id^="btn-search-"]', function (event) {
-        if ($("#btn-search-byname").is(':checked'))
-            $("#cont_accurate").show();
-        else
-            $("#cont_accurate").hide();
     });
 
     $('select', filtr).on('change', function () {
@@ -283,21 +265,12 @@
             return
         }
 
-        let accurate = $("#btn-accurate").is(':checked');
-        let byword = $("#btn-search-byword").is(':checked');
-
         localStorage.setItem("searchquery", query);
-        localStorage.setItem("bywordsearch", byword);
 
         $('#btn-search').prop('disabled', true);
         $('#ico-search').hide();
         $('#spin-search').show();
-        var accStr = ""
-        if (accurate)
-            accStr = "&accurate"
-        if (byword)
-            accStr = "&byword"
-        $.get("/search?query=" + query + accStr).done(function (data) {
+        $.get("/search?query=" + query).done(function (data) {
             $('[name="tracker"],[name="voice"],[name="seasons"],[name="quality"]', filtr).empty()
             torrents = JSON.parse(data);
             if (!torrents) {
