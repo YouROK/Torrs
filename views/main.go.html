@@ -192,22 +192,22 @@
             if (quality !== "Все" || tracker !== "Все" || voice !== "Все" || seasons !== "Все") any = true;
 
             if (quality !== "Все") {
-                if (element.quality == parseInt(quality)) pass = true
+                if (element.quality === parseInt(quality)) pass = true
                 else nopass = true
             }
 
             if (tracker !== "Все") {
-                if (element.trackerName == tracker) pass = true
+                if (element.trackerName === tracker) pass = true
                 else nopass = true
             }
 
             if (voice !== "Все") {
-                if (element.voices.indexOf(voice) !== -1) pass = true
+                if (element.voices && element.voices.indexOf(voice) !== -1) pass = true
                 else nopass = true
             }
 
             if (seasons !== "Все") {
-                if (element.seasons.indexOf(parseInt(seasons)) !== -1) pass = true
+                if (element.seasons && element.seasons.indexOf(parseInt(seasons)) !== -1) pass = true
                 else nopass = true
             }
 
