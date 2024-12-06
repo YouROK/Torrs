@@ -9,8 +9,8 @@ import (
 	ss "sync"
 	"time"
 	"torrsru/db"
+	"torrsru/global"
 	"torrsru/web/api"
-	"torrsru/web/global"
 	"torrsru/web/static"
 )
 
@@ -44,7 +44,7 @@ func blockUsers() gin.HandlerFunc {
 		referer := strings.ToLower(c.Request.Referer())
 		useragent := strings.ToLower(c.Request.UserAgent())
 
-		if strings.Contains(referer, "lampishe") || strings.Contains(useragent, "lampishe") || strings.Contains(referer, "lampa") || strings.Contains(useragent, "lampa") {
+		if strings.Contains(referer, "lamp") || strings.Contains(useragent, "lamp") {
 			mu.Lock()
 			c.Next()
 			time.Sleep(time.Millisecond * 300)

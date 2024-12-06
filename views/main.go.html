@@ -87,12 +87,16 @@
 
 {{template "modal.go.html" .}}
 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <script>
     var clipboard = new Clipboard('.copy-link');
     var torrents = undefined;
     var filtred = []
     const content = $('#torrs')
     var tshost = "";
+
+    let tg = window.Telegram.WebApp;
 
     let filter_search = {
         voice: [],
@@ -108,6 +112,8 @@
             search();
         }
         tshost = localStorage.getItem("tshost");
+        tg.ready();
+        tg.expand();
     });
 
     $(document).on('change', 'input:radio[id^="btn-sort-"]', function (event) {
@@ -219,16 +225,38 @@
     }
 
     function openTSDialog(magnet, title) {
-        $("#magnet-text").val(magnet.trim());
-        $("#title-label").text(title.trim());
-        $("#hostts").val(tshost);
-        $('#modalAddTS').modal('show');
+        let initd = "query_id=AAFY61gIAAAAAFjrWAj8qx2J&user=%7B%22id%22%3A140045144%2C%22first_name%22%3A%22%F0%9F%85%A8%F0%9F%85%9E%F0%9F%85%A4%F0%9F%85%A1%F0%9F%85%9E%F0%9F%85%9A%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22YouROK%22%2C%22language_code%22%3A%22ru%22%2C%22is_premium%22%3Atrue%2C%22allows_write_to_pm%22%3Atrue%2C%22photo_url%22%3A%22https%3A%5C%2F%5C%2Ft.me%5C%2Fi%5C%2Fuserpic%5C%2F320%5C%2F4ErAxgQ5SlBQrhSN7HswFkZvGuPQufSCVl26i6vBtiI.svg%22%7D&auth_date=1733492954&signature=ob8sJwwHe7lqp5M8Vs-JiPx_Eqyze5ROyRZxADhP7tVfjlifte6eBXMvE5lz-Lo61hKRcIx0DXrp-6zxev8PBA&hash=f8337d6dff320022ebdc929e75d8ab5c8f74ed1ef2f0471b26fd63ec8a7725d8";
+        if (tg.initData || initd) {
+            var data = {
+                "init_data": initd, //tg.initData,
+                "magnet": magnet,
+            };
+            $.ajax({
+                url: "/sendbot",
+                type: "POST",
+                data: JSON.stringify(data),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    toast("Magnet отправлен");
+                },
+                error: function (xhr, status, error) {
+                    toast("Произошла ошибка: " + xhr.responseText || error || status);
+                }
+            });
+        } else {
+            $("#magnet-text").val(magnet.trim());
+            $("#title-label").text(title.trim());
+            $("#hostts").val(tshost);
+            $('#modalAddTS').modal('show');
+        }
     }
 
     function addMagnetTS() {
         tshost = $("#hostts").val();
         const magnet = $("#magnet-text").val();
         const title = $("#title-label").text();
+
 
         localStorage.setItem("tshost", tshost);
         var data = {

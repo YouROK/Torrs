@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
+	"torrsru/global"
 	"torrsru/models/fdb"
-	"torrsru/web/global"
 )
 
 var (
@@ -27,7 +27,7 @@ func Init() {
 
 	err = initIndex()
 	if err != nil {
-		log.Fatalln("Error open index", err)
+		log.Fatalln("Error open indexTorrentTitle", err)
 		return
 	}
 }
@@ -70,8 +70,8 @@ func saveTorrents(cols []*fdb.Collection) error {
 			return err
 		}
 
-		//save and index torrents
-		batch := index.NewBatch()
+		//save and indexTorrentTitle torrents
+		batch := indexTorrentTitle.NewBatch()
 		for _, col := range cols {
 			for _, torr := range col.Value.Torrents {
 				hash := torr.GetUnique()
@@ -94,6 +94,6 @@ func saveTorrents(cols []*fdb.Collection) error {
 				}
 			}
 		}
-		return index.Batch(batch)
+		return indexTorrentTitle.Batch(batch)
 	})
 }

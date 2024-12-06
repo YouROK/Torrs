@@ -8,30 +8,30 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"torrsru/global"
 	"torrsru/models/fdb"
-	"torrsru/web/global"
 )
 
 var (
-	index bleve.Index
+	indexTorrentTitle bleve.Index
 )
 
 func initIndex() error {
 	mappings := bleve.NewIndexMapping()
 	var err error
-	index, err = bleve.Open(filepath.Join(global.PWD, "index.db"))
+	indexTorrentTitle, err = bleve.Open(filepath.Join(global.PWD, "index.db"))
 	if err != nil {
-		index, err = bleve.NewUsing(filepath.Join(global.PWD, "index.db"), mappings, "scorch", "scorch", nil)
+		indexTorrentTitle, err = bleve.NewUsing(filepath.Join(global.PWD, "index.db"), mappings, "scorch", "scorch", nil)
 	}
 	return err
 }
 
 func RebuildIndex() error {
 	var err error
-	index.Close()
+	indexTorrentTitle.Close()
 	os.RemoveAll(filepath.Join(global.PWD, "index.db"))
 	mappings := bleve.NewIndexMapping()
-	index, err = bleve.NewUsing(filepath.Join(global.PWD, "index.db"), mappings, "scorch", "scorch", nil)
+	indexTorrentTitle, err = bleve.NewUsing(filepath.Join(global.PWD, "index.db"), mappings, "scorch", "scorch", nil)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func RebuildIndex() error {
 			return nil
 		}
 
-		batch := index.NewBatch()
+		batch := indexTorrentTitle.NewBatch()
 		indexedTorrents := 0
 		err := torrsB.ForEach(func(uniTorr, _ []byte) error {
 			torrB := torrsB.Bucket(uniTorr)
@@ -53,13 +53,13 @@ func RebuildIndex() error {
 
 			if title != "" {
 				if batch.Size() >= 100000 {
-					err := index.Batch(batch)
+					err := indexTorrentTitle.Batch(batch)
 					if err != nil {
 						return err
 					}
 					indexedTorrents += batch.Size()
 					log.Println("Indexed torrents:", indexedTorrents)
-					batch = index.NewBatch()
+					batch = indexTorrentTitle.NewBatch()
 				} else {
 					err := batch.Index(hex.EncodeToString(uniTorr), title)
 					if err != nil {
@@ -70,7 +70,7 @@ func RebuildIndex() error {
 			return nil
 		})
 		if batch.Size() > 0 {
-			err = index.Batch(batch)
+			err = indexTorrentTitle.Batch(batch)
 			if err != nil {
 				return err
 			}
@@ -86,7 +86,7 @@ func Search(query string) ([]*fdb.Torrent, error) {
 	q := bleve.NewMatchQuery(query)
 	searchRequest := bleve.NewSearchRequest(q)
 	searchRequest.Size = 1000
-	searchResult, err := index.Search(searchRequest)
+	searchResult, err := indexTorrentTitle.Search(searchRequest)
 	if err != nil {
 		return nil, err
 	}
