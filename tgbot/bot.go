@@ -32,23 +32,14 @@ func Start(token, host string) error {
 	b.Handle("/Help", help)
 	b.Handle("/start", help)
 
-	b.Handle(tele.OnWebApp, func(c tele.Context) error {
-		txt := c.Text()
-		if strings.HasPrefix(strings.ToLower(txt), "magnet:") || isHash(txt) {
-			return infoTorrent(c, c.Text())
-		} else {
-			help(c)
-			return nil
-		}
-	})
+	b.Handle("/queue", torr.Show)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
 		txt := c.Text()
 		if strings.HasPrefix(strings.ToLower(txt), "magnet:") || isHash(txt) {
 			return infoTorrent(c, c.Text())
 		} else {
-			help(c)
-			return nil
+			return c.Send("Вставьте магнет/хэш торрента или нажмите на поиск\n\nВ окне поиска введите название и в списке торрентов нажмите на +\n\nУчтите что файл не должен превышать 2гб это лимит телеграмма на отправку файлов")
 		}
 	})
 
@@ -85,10 +76,7 @@ func Start(token, host string) error {
 			return errors.New("Chat with user not found")
 		}
 		u := tele.Update{
-			ID: 0,
 			Message: &tele.Message{
-				ID:       0,
-				ThreadID: 0,
 				Sender: &tele.User{
 					ID:           data.User.ID,
 					FirstName:    data.User.FirstName,
