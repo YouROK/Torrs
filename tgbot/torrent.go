@@ -39,9 +39,11 @@ func infoTorrent(c tele.Context, magnet string) error {
 		}
 		i += len(filepath.Base(f.Path) + " " + humanize.Bytes(uint64(f.Length)))
 	}
-	filesKbd.Inline(files...)
-
-	return c.Send(txt, filesKbd)
+	if len(files) > 0 {
+		filesKbd.Inline(files...)
+		return c.Send(txt, filesKbd)
+	}
+	return nil
 }
 
 func getTorrent(c tele.Context) error {
