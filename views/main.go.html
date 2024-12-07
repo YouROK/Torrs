@@ -236,13 +236,8 @@
                 data: JSON.stringify(data),
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
-                success: function (response) {
-                    toast("Magnet отправлен");
-                },
-                error: function (xhr, status, error) {
-                    toast("Произошла ошибка: " + xhr.responseText || error || status);
-                }
             });
+            tg.close();
         } else {
             $("#magnet-text").val(magnet.trim());
             $("#title-label").text(title.trim());
@@ -255,7 +250,6 @@
         tshost = $("#hostts").val();
         const magnet = $("#magnet-text").val();
         const title = $("#title-label").text();
-
 
         localStorage.setItem("tshost", tshost);
         var data = {
@@ -351,6 +345,9 @@
             if (c[key] > b[key]) return -1
             return 0
         });
+
+        if (tg.initData && key==="size")
+            filtred.reverse();
 
         filtred.forEach(function (elem) {
             const item = $(`<div class="card">
