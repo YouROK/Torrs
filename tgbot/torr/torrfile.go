@@ -26,9 +26,10 @@ type TorrFile struct {
 
 	lastUpdate time.Time
 	resp       *http.Response
+	complete   chan bool
 }
 
-func newTFile(dlQueue *DLQueue) (*TorrFile, error) {
+func NewTorrFile(dlQueue *DLQueue) (*TorrFile, error) {
 	hash := dlQueue.hash
 	fileID := dlQueue.fileID
 	dlQueue.c.Bot().Edit(dlQueue.updateMsg, "Подключение к торренту")
@@ -72,6 +73,7 @@ func newTFile(dlQueue *DLQueue) (*TorrFile, error) {
 		return nil, err
 	}
 	tf.resp = resp
+	tf.complete = make(chan bool)
 
 	return tf, nil
 }
@@ -84,6 +86,9 @@ func (t *TorrFile) Read(p []byte) (n int, err error) {
 		if since > 1.0 || t.offset >= t.size {
 			t.UpdateStatus()
 			t.dlQueue.c.Bot().Notify(t.dlQueue.c.Recipient(), tele.UploadingVideo)
+		}
+		if err == io.EOF {
+			t.complete <- true
 		}
 	} else {
 		log.Println("Error reading torrent file:", err)
@@ -111,12 +116,13 @@ func (t *TorrFile) UpdateStatus() {
 		if name != "" {
 			msg += "<i>" + name + "</i>\n"
 		}
-		msg += "<b>Хэш: </b><code>" + t.hash + "</code>\n" +
-			"<b>Скорость: </b>" + speed + "\n" +
-			"<b>Осталось: </b>" + wait.String() + "\n" +
-			"<b>Пиры: </b>" + peers + "\n" +
-			"<b>Загружено: </b>" + prc
-
+		msg += "<b>Хэш:</b> <code>" + t.hash + "</code>\n"
+		if t.offset < t.size {
+			msg += "<b>Скорость: </b>" + speed + "\n" +
+				"<b>Осталось: </b>" + wait.String() + "\n" +
+				"<b>Пиры: </b>" + peers + "\n" +
+				"<b>Загружено: </b>" + prc
+		}
 		if t.offset >= t.size {
 			msg += "\n<b>Завершение загрузки, это займет некоторое время</b>"
 		}
@@ -130,5 +136,6 @@ func (t *TorrFile) Close() {
 	if t.resp != nil && t.resp.Body != nil {
 		t.resp.Body.Close()
 		t.resp = nil
+		close(t.complete)
 	}
 }
