@@ -14,8 +14,8 @@
     <div class="row align-items-center">
         <div class="col w-100 text-md-start text-left text-truncate">
             <div class="form-floating">
-                <input id="query" type="text" class="form-control" placeholder="Введите название фильма или сериала для поиска">
-                <label for="query">Введите название фильма или сериала для поиска</label>
+                <input id="query" type="text" class="form-control" placeholder="Введите название фильма или сериала">
+                <label for="query">Введите название фильма или сериала</label>
             </div>
         </div>
         <div class="col-md-auto" style="padding: 10px">
@@ -303,7 +303,7 @@
                 elem.date = date.getTime()
                 elem.dateHuman = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2)
             });
-            filtred = []
+            filtred = [];
         }).fail(function (jqXHR, textStatus, errorThrown) {
             toast(jqXHR.responseText);
         }).always(function () {
@@ -313,6 +313,7 @@
             initFilter();
             filter();
             buildTorrents();
+            document.getElementById("status").scrollIntoView();
         });
     }
 
