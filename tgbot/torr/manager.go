@@ -173,18 +173,22 @@ func loadingAll(wrk *Worker) {
 			wa.Done()
 		}()
 
+		tgfid := db.GetTGFileID(wrk.torrentHash + "|" + strconv.Itoa(file.Id))
 		d := &tele.Document{}
-		d.File.FileReader = torrFile
 		d.FileName = file.Path
 		d.Caption = caption
+		if tgfid != "" {
+			d.FileID = tgfid
+		} else {
+			d.File.FileReader = torrFile
+		}
 
 		err = wrk.c.Send(d)
 		complete = true
 		wa.Wait()
 		torrFile.Close()
 		if errors.Is(err, ERR_STOPPED) {
-			msgstr := fmt.Sprintf("Остановлен: %v", file.Path)
-			wrk.c.Bot().Edit(wrk.msg, msgstr)
+			wrk.c.Bot().Delete(wrk.msg)
 		} else if err != nil {
 			fmt.Println("Ошибка загрузки в телеграм:", err)
 			errstr := fmt.Sprintf("Ошибка загрузки в телеграм: %v", file.Path)
