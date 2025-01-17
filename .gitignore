@@ -24,3 +24,4 @@ go.work
 /torrents.db
 /.idea/
 /index.db/
+/tgbotapi/
