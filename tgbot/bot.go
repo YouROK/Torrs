@@ -46,13 +46,13 @@ func Start(token, host string) error {
 	b.Handle(tele.OnCallback, func(c tele.Context) error {
 		args := c.Args()
 		if len(args) > 0 {
-			if args[0] == "\ffile" {
+			if args[0] == "\ffile" || args[0] == "\fall" {
 				return getTorrent(c)
 			}
 			if args[0] == "\ftorr" {
 				return infoTorrent(c, args[1])
 			}
-			if args[0] == "\fdownloadCancel" {
+			if args[0] == "\fcancel" {
 				if num, err := strconv.Atoi(args[1]); err == nil {
 					torr.Cancel(num)
 					return nil
@@ -96,6 +96,7 @@ func Start(token, host string) error {
 		return infoTorrent(c, msg)
 	}
 
+	torr.Start()
 	go b.Start()
 
 	return nil

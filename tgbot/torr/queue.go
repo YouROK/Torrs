@@ -2,13 +2,10 @@ package torr
 
 import (
 	"fmt"
+	"github.com/dustin/go-humanize"
 	tele "gopkg.in/telebot.v4"
-	"math"
-	"path/filepath"
 	"strconv"
-	"sync"
-	"torrsru/db"
-	"torrsru/tgbot/torr/state"
+	"time"
 )
 
 type DLQueue struct {
@@ -21,172 +18,90 @@ type DLQueue struct {
 }
 
 var (
-	queue   []*DLQueue
-	mu, smu sync.Mutex
-	isWork  bool
-	idCount int
+	manager = &Manager{}
 )
 
+func Start() {
+	manager.Start()
+}
+
 func Show(c tele.Context) error {
-	msg := ""
-	mu.Lock()
-	for i, dlQueue := range queue {
-		s := "#" + strconv.Itoa(i+1) + ":\n<b>Хэш:</b> <code>" + dlQueue.hash + "</code>\n<i>" + filepath.Base(dlQueue.fileName) + "</i>\n"
-		if len(msg+s) > 1024 {
-			err := c.Send(msg)
-			if err != nil {
-				return err
-			}
-			msg = ""
-		}
-		msg += s
-	}
-	mu.Unlock()
-	if msg != "" {
-		return c.Send("Очередь:\n" + msg)
-	} else {
-		return c.Send("Очередь пуста")
-	}
+	//msg := ""
+	//mu.Lock()
+	//for i, dlQueue := range queue {
+	//	s := "#" + strconv.Itoa(i+1) + ":\n<b>Хэш:</b> <code>" + dlQueue.hash + "</code>\n<i>" + filepath.Base(dlQueue.fileName) + "</i>\n"
+	//	if len(msg+s) > 1024 {
+	//		err := c.Send(msg)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		msg = ""
+	//	}
+	//	msg += s
+	//}
+	//mu.Unlock()
+	//if msg != "" {
+	//	return c.Send("Очередь:\n" + msg)
+	//} else {
+	//	return c.Send("Очередь пуста")
+	//}
+	return nil
+}
+
+func AddAll(c tele.Context, hash string) {
+	manager.Add(c, hash, "all")
 }
 
 func Add(c tele.Context, hash, fileID string) {
-	mu.Lock()
-
-	if len(queue) > 30 {
-		c.Bot().Send(c.Recipient(), "Очередь переполнена, попробуйте попозже\n\nЭлементов в очереди:"+strconv.Itoa(len(queue)))
-		mu.Unlock()
-		return
-	}
-
-	idCount++
-	if idCount > math.MaxInt {
-		idCount = 0
-	}
-
-	dlQueue := &DLQueue{
-		id:     idCount,
-		c:      c,
-		hash:   hash,
-		fileID: fileID,
-	}
-	mu.Unlock()
-	ti, _ := GetTorrentInfo(hash)
-	if ti != nil {
-		id, err := strconv.Atoi(dlQueue.fileID)
-		if err == nil {
-			file := ti.FindFile(id)
-			if file != nil {
-				idi := db.GetTGFileID(dlQueue.hash + "|" + dlQueue.fileID)
-				if idi != "" {
-					d := &tele.Document{}
-					d.FileID = idi
-					d.Caption = filepath.Base(file.Path)
-					d.FileName = file.Path
-					err = dlQueue.c.Send(d)
-					if err == nil {
-						return
-					}
-				}
-				dlQueue.fileName = file.Path
-			}
-		}
-	}
-	mu.Lock()
-	queue = append(queue, dlQueue)
-	mu.Unlock()
-
-	uMsg, _ := c.Bot().Send(c.Recipient(), "Подготовка к загрузке")
-
-	dlQueue.updateMsg = uMsg
-	go work()
-	go sendStatus()
+	manager.Add(c, hash, "file:"+fileID)
 }
 
 func Cancel(id int) {
-	mu.Lock()
-	defer mu.Unlock()
-	for i, dlQueue := range queue {
-		if dlQueue.id == id {
-			dlQueue.c.Bot().Delete(dlQueue.updateMsg)
-			queue = append(queue[:i], queue[i+1:]...)
-			go sendStatus()
-			return
-		}
-	}
+	manager.Cancel(id)
 }
 
-func work() {
-	smu.Lock()
-	if isWork {
-		smu.Unlock()
-		return
-	}
-	isWork = true
-	defer func() { isWork = false }()
-	smu.Unlock()
-
-	for {
-		mu.Lock()
-		if len(queue) == 0 {
-			mu.Unlock()
-			break
+func updateLoadStatus(wrk *Worker, file *TorrFile, fi, fc int) {
+	ti, err := GetTorrentInfo(wrk.torrentHash)
+	if err != nil {
+		wrk.c.Bot().Edit(wrk.msg, "Ошибка при получении данных о торренте")
+	} else if wrk.isCancelled {
+		wrk.c.Bot().Edit(wrk.msg, "Остановка...")
+	} else {
+		wrk.c.Send(tele.UploadingVideo)
+		if ti.DownloadSpeed == 0 {
+			ti.DownloadSpeed = 1.0
 		}
-		dlQueue := queue[0]
-		queue = queue[1:]
-		mu.Unlock()
+		wait := time.Duration(float64(file.Loaded())/ti.DownloadSpeed) * time.Second
+		speed := humanize.Bytes(uint64(ti.DownloadSpeed)) + "/sec"
+		peers := fmt.Sprintf("%v · %v/%v", ti.ConnectedSeeders, ti.ActivePeers, ti.TotalPeers)
+		prc := fmt.Sprintf("%.2f%% %v / %v", float64(file.offset)*100.0/float64(file.size), humanize.Bytes(uint64(file.offset)), humanize.Bytes(uint64(file.size)))
 
-		sendStatus()
-
-		ti, _ := GetTorrentInfo(dlQueue.hash)
-		var file *state.TorrentFileStat
-		if ti != nil {
-			id, _ := strconv.Atoi(dlQueue.fileID)
-			file = ti.FindFile(id)
+		name := file.name
+		if name == ti.Title {
+			name = ""
 		}
 
-		dlQueue.c.Bot().Notify(dlQueue.c.Recipient(), tele.UploadingVideo)
-
-		caption := filepath.Base(file.Path)
-		torrFile, err := NewTorrFile(dlQueue)
-		if err != nil {
-			dlQueue.c.Bot().Edit(dlQueue.updateMsg, err.Error())
-			continue
+		msg := "Загрузка торрента:\n" +
+			"<b>" + ti.Title + "</b>\n"
+		if name != "" {
+			msg += "<i>" + name + "</i>\n"
+		}
+		msg += "<b>Хэш:</b> <code>" + file.hash + "</code>\n"
+		if file.offset < file.size {
+			msg += "<b>Скорость: </b>" + speed + "\n" +
+				"<b>Осталось: </b>" + wait.String() + "\n" +
+				"<b>Пиры: </b>" + peers + "\n" +
+				"<b>Загружено: </b>" + prc
+		}
+		if fc > 1 {
+			msg += "\n<b>Файлов: </b>" + strconv.Itoa(fi) + "/" + strconv.Itoa(fc)
+		}
+		if file.offset >= file.size {
+			msg += "\n<b>Завершение загрузки, это займет некоторое время</b>"
 		}
 
-		d := &tele.Document{}
-		d.File.FileReader = torrFile
-		d.FileName = file.Path
-		d.Caption = caption
-		go func() {
-			err := dlQueue.c.Send(d)
-			torrFile.Close()
-			if err != nil {
-				fmt.Println("Ошибка загрузки в телеграм:", err)
-				errstr := fmt.Sprintf("Ошибка загрузки в телеграм: %v", file.Path)
-				dlQueue.c.Bot().Edit(dlQueue.updateMsg, errstr)
-			} else {
-				dlQueue.c.Bot().Delete(dlQueue.updateMsg)
-				db.SaveTGFileID(dlQueue.hash+"|"+dlQueue.fileID, d.FileID)
-			}
-		}()
-		<-torrFile.complete
-	}
-}
-
-func sendStatus() {
-	mu.Lock()
-	defer mu.Unlock()
-	for i, dlQueue := range queue {
 		torrKbd := &tele.ReplyMarkup{}
-		btnCancel := torrKbd.Data("Отмена", "downloadCancel", strconv.Itoa(dlQueue.id))
-		rows := []tele.Row{torrKbd.Row(btnCancel)}
-		torrKbd.Inline(rows...)
-
-		msg := "Номер в очереди " + strconv.Itoa(i+1)
-		if dlQueue.fileName != "" {
-			msg += "\n<i>" + dlQueue.fileName + "</i>"
-		}
-
-		dlQueue.c.Bot().Edit(dlQueue.updateMsg, msg, torrKbd)
+		torrKbd.Inline([]tele.Row{torrKbd.Row(torrKbd.Data("Отмена", "cancel", strconv.Itoa(wrk.id)))}...)
+		wrk.c.Bot().Edit(wrk.msg, msg, torrKbd)
 	}
 }
