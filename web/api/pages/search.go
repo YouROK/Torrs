@@ -9,10 +9,15 @@ import (
 	"net/http"
 	"strconv"
 	"torrsru/db"
+	"strings"
 )
 
 func Search(c *gin.Context) {
 	query := c.Query("query")
+	if strings.TrimSpace(query) == "" {
+		c.Status(http.StatusNoContent)
+		return
+	}
 
 	trs, err := db.Search(query)
 	if err != nil {
