@@ -61,6 +61,9 @@ func Cancel(id int) {
 }
 
 func updateLoadStatus(wrk *Worker, file *TorrFile, fi, fc int) {
+	if wrk.msg == nil {
+		return
+	}
 	ti, err := GetTorrentInfo(wrk.torrentHash)
 	if err != nil {
 		wrk.c.Bot().Edit(wrk.msg, "Ошибка при получении данных о торренте")
@@ -98,6 +101,8 @@ func updateLoadStatus(wrk *Worker, file *TorrFile, fi, fc int) {
 		}
 		if file.offset >= file.size {
 			msg += "\n<b>Завершение загрузки, это займет некоторое время</b>"
+			wrk.c.Bot().Edit(wrk.msg, msg)
+			return
 		}
 
 		torrKbd := &tele.ReplyMarkup{}
