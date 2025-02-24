@@ -315,7 +315,7 @@
             torrents.forEach(function (elem) {
                 let date = new Date(elem.createTime)
                 elem.date = date.getTime()
-                elem.dateHuman = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2)
+                elem.dateHuman = ('0' + date.getDate()).slice(-2) +'.'+ ('0' + (date.getMonth() + 1)).slice(-2) +'.'+ date.getFullYear()
             });
             filtred = [];
         }).fail(function (jqXHR, textStatus, errorThrown) {
