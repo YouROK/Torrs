@@ -106,10 +106,18 @@
     const filtr = $('#filter');
 
     $(window).ready(function () {
+        const checkedSortID = localStorage.getItem('checkedSort');
+        if (checkedSortID) {
+            const checkedSort = document.getElementById(checkedSortID);
+            if (checkedSort) {
+                checkedSort.checked = true;
+            }
+        }
+
         let query = localStorage.getItem("searchquery");
         if (query) {
             $("#query").val(query);
-            search();
+            search(true);
         }
         tshost = localStorage.getItem("tshost");
         tg.ready();
@@ -118,11 +126,17 @@
 
     $(document).on('change', 'input:radio[id^="btn-sort-"]', function (event) {
         buildTorrents();
+        const checkedSortID = $('#sort input:radio:checked').attr('id');
+        localStorage.setItem('checkedSort', this.id);
     });
 
     $('select', filtr).on('change', function () {
         filter();
         buildTorrents();
+        localStorage.setItem('SortQuality', $('[name="quality"]', filtr).val());
+        localStorage.setItem('SortTracker', $('[name="tracker"]', filtr).val());
+        localStorage.setItem('SortVoice', $('[name="voice"]', filtr).val());
+        localStorage.setItem('SortSeasons', $('[name="seasons"]', filtr).val());
     })
 
     function reset_filter() {
@@ -279,7 +293,7 @@
         $("#toast").toast("show");
     }
 
-    function search() {
+    function search(initialLoad = false) {
         let query = $("#query").val();
         if (!query) {
             toast("Введите название фильма или сериала для поиска");
@@ -311,9 +325,24 @@
             $('#ico-search').show();
             $('#spin-search').hide();
             initFilter();
+            if (initialLoad) {
+                const sQuality = localStorage.getItem('SortQuality');
+                const sTracker = localStorage.getItem('SortTracker');
+                const sVoice = localStorage.getItem('SortVoice');
+                const sSeasons = localStorage.getItem('SortSeasons');
+                if (sQuality && $('[name="quality"]', filtr).find('option[value="' + sQuality + '"]').length > 0)
+                    $('[name="quality"]', filtr).val(sQuality);
+                if (sTracker && $('[name="tracker"]', filtr).find('option[value="' + sTracker + '"]').length > 0)
+                    $('[name="tracker"]', filtr).val(sTracker);
+                if (sVoice && $('[name="voice"]', filtr).find('option[value="' + sVoice + '"]').length > 0)
+                    $('[name="voice"]', filtr).val(sVoice);
+                if (sSeasons && $('[name="seasons"]', filtr).find('option[value="' + sSeasons + '"]').length > 0)
+                    $('[name="seasons"]', filtr).val(sSeasons);
+            }
             filter();
             buildTorrents();
-            document.getElementById("status").scrollIntoView();
+            if (initialLoad)
+                document.getElementById("status").scrollIntoView();
         });
     }
 
