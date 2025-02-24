@@ -55,6 +55,7 @@ func Start(token, host string) error {
 			if args[0] == "\fcancel" {
 				if num, err := strconv.Atoi(args[1]); err == nil {
 					torr.Cancel(num)
+					c.Bot().Delete(c.Callback().Message)
 					return nil
 				}
 			}
