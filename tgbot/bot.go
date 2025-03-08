@@ -2,9 +2,11 @@ package tgbot
 
 import (
 	"errors"
+	"fmt"
 	initdata "github.com/telegram-mini-apps/init-data-golang"
 	tele "gopkg.in/telebot.v4"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -32,12 +34,35 @@ func Start(token, host string) error {
 	b.Handle("/Help", help)
 	b.Handle("/start", help)
 
-	b.Handle("/queue", torr.Show)
+	b.Handle("/queue", torr.ShowQueue)
+
+	b.Handle("/id", func(c tele.Context) error {
+		return c.Send(fmt.Sprintf("%v %v %v %v", c.Sender().ID, c.Sender().Username, c.Sender().FirstName, c.Sender().LastName))
+	})
+	b.Handle("/exit", func(c tele.Context) error {
+		if c.Sender().ID == 140045144 {
+			c.Send("Exit")
+			os.Exit(0)
+		}
+		return nil
+	})
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
 		txt := c.Text()
 		if strings.HasPrefix(strings.ToLower(txt), "magnet:") || isHash(txt) {
 			return infoTorrent(c, c.Text())
+		} else if c.Message().ReplyTo != nil && c.Message().ReplyTo.ReplyMarkup != nil && len(c.Message().ReplyTo.ReplyMarkup.InlineKeyboard) > 0 {
+			data := c.Message().ReplyTo.ReplyMarkup.InlineKeyboard[0][0].Data
+			if strings.HasPrefix(strings.ToLower(data), "\fall|") {
+				hash := strings.TrimPrefix(data, "\fall|")
+				from, to, err := ParseRange(c.Message().Text)
+				if err != nil {
+					c.Send("Ошибка: " + err.Error())
+					return err
+				}
+				torr.AddRange(c, hash, from, to)
+			}
+			return nil
 		} else {
 			return c.Send("Вставьте магнет/хэш торрента или нажмите на поиск\n\nВ окне поиска введите название и в списке торрентов нажмите на +\n\nУчтите что файл не должен превышать 2гб это лимит телеграмма на отправку файлов")
 		}
@@ -107,4 +132,23 @@ func help(c tele.Context) error {
 	return c.Send("Для поиска нажмите кнопку \"Поиск\", в списке нажать <b>+</b> для добавления на скачивание\n" +
 		"Так же можно вставить магнет или хэш торрента\n" +
 		"Лимит телеграма на загружаемый файл 2гб, выбирайте торренты, где файл будет меньше 2гб")
+}
+
+func ParseRange(rng string) (int, int, error) {
+	parts := strings.Split(rng, "-")
+
+	if len(parts) != 2 {
+		return -1, -1, errors.New("Неверный формат строки")
+	}
+
+	num1, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err1 != nil {
+		return -1, -1, err1
+	}
+
+	num2, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err2 != nil {
+		return -1, -1, err2
+	}
+	return num1, num2, nil
 }

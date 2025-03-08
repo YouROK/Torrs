@@ -8,7 +8,6 @@ import (
 	"math"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 	"torrsru/db"
@@ -21,7 +20,8 @@ type Worker struct {
 	msg         *tele.Message
 	torrentHash string
 	isCancelled bool
-	cmd         string
+	from        int
+	to          int
 	ti          *state.TorrentStatus
 }
 
@@ -38,7 +38,7 @@ func (m *Manager) Start() {
 	go m.work()
 }
 
-func (m *Manager) Add(c tele.Context, hash, cmd string) {
+func (m *Manager) AddRange(c tele.Context, hash string, from, to int) {
 	m.queueLock.Lock()
 	defer m.queueLock.Unlock()
 
@@ -75,13 +75,30 @@ func (m *Manager) Add(c tele.Context, hash, cmd string) {
 		return
 	}
 
+	if from == 1 && to == -1 {
+		to = len(ti.FileStats)
+	}
+	if to > len(ti.FileStats) {
+		to = len(ti.FileStats)
+	}
+	if from < 1 {
+		from = 1
+	}
+	if to >= 0 && to < from {
+		from, to = to, from
+	}
+	if to > len(ti.FileStats) {
+		to = len(ti.FileStats)
+	}
+
 	w := &Worker{
 		id:          m.ids,
 		c:           c,
 		torrentHash: hash,
-		cmd:         cmd,
 		msg:         msg,
 		ti:          ti,
+		from:        from,
+		to:          to,
 	}
 
 	m.queue = append(m.queue, w)
@@ -129,16 +146,22 @@ func (m *Manager) work() {
 
 		m.sendQueueStatus()
 
-		go func() {
-			if wrk.cmd == "all" {
-				loadingAll(wrk)
-			} else {
-				loading(wrk)
-			}
-			m.queueLock.Lock()
-			delete(m.working, wrk.id)
-			m.queueLock.Unlock()
-		}()
+		loading(wrk)
+
+		m.queueLock.Lock()
+		delete(m.working, wrk.id)
+		m.queueLock.Unlock()
+
+		//go func() {
+		//	if wrk.cmd == "all" {
+		//		loadingAll(wrk)
+		//	} else {
+		//		loading(wrk)
+		//	}
+		//	m.queueLock.Lock()
+		//	delete(m.working, wrk.id)
+		//	m.queueLock.Unlock()
+		//}()
 	}
 }
 
@@ -153,21 +176,16 @@ func (m *Manager) sendQueueStatus() {
 		torrKbd.Inline([]tele.Row{torrKbd.Row(torrKbd.Data("Отмена", "cancel", strconv.Itoa(wrk.id)))}...)
 
 		msg := "Номер в очереди " + strconv.Itoa(i+1)
-		if wrk.cmd == "all" {
-			msg += "\n<i>Скачать все файлы</i>"
-		} else if strings.HasPrefix(wrk.cmd, "file:") {
-			id, _ := strconv.Atoi(strings.TrimPrefix(wrk.cmd, "file:"))
-			file := wrk.ti.FindFile(id)
-			msg += "\n<i>" + file.Path + "</i>"
-		}
 
 		wrk.c.Bot().Edit(wrk.msg, msg, torrKbd)
 	}
 }
 
-func loadingAll(wrk *Worker) {
+func loading(wrk *Worker) {
 	iserr := false
-	for i, file := range wrk.ti.FileStats {
+	//for i, file := range wrk.ti.FileStats {
+	for i := wrk.from - 1; i <= wrk.to-1; i++ {
+		file := wrk.ti.FileStats[i]
 		if wrk.isCancelled {
 			return
 		}
@@ -183,14 +201,6 @@ func loadingAll(wrk *Worker) {
 	if !iserr {
 		wrk.c.Bot().Delete(wrk.msg)
 	}
-}
-
-func loading(wrk *Worker) {
-	var file *state.TorrentFileStat
-	id, _ := strconv.Atoi(strings.TrimPrefix(wrk.cmd, "file:"))
-	file = wrk.ti.FindFile(id)
-
-	uploadFile(wrk, file, 0, 0)
 }
 
 func uploadFile(wrk *Worker, file *state.TorrentFileStat, fi, fc int) error {
@@ -239,7 +249,6 @@ func uploadFile(wrk *Worker, file *state.TorrentFileStat, fi, fc int) error {
 	} else if err != nil {
 		log.Println("Error send message:", err)
 	} else {
-		wrk.c.Bot().Delete(wrk.msg)
 		db.SaveTGFileID(wrk.torrentHash+"|"+strconv.Itoa(file.Id), d.FileID)
 	}
 	return err
