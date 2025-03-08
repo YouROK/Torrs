@@ -57,7 +57,7 @@ func Start(token, host string) error {
 				hash := strings.TrimPrefix(data, "\fall|")
 				from, to, err := ParseRange(c.Message().Text)
 				if err != nil {
-					c.Send("Ошибка: " + err.Error())
+					c.Send("Ошибка, нужно указывать числа, пример: 2-12")
 					return err
 				}
 				torr.AddRange(c, hash, from, to)
