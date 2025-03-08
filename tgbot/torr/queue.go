@@ -71,19 +71,6 @@ func AddRange(c tele.Context, hash string, from, to int) {
 	manager.AddRange(c, hash, from, to)
 }
 
-func AddAll(c tele.Context, hash string) {
-	manager.AddRange(c, hash, 1, -1)
-}
-
-func Add(c tele.Context, hash, fileID string) {
-	from, err := strconv.Atoi(fileID)
-	if err != nil {
-		c.Send("Ошибка в конвертации номера: " + err.Error())
-		return
-	}
-	manager.AddRange(c, hash, from, from)
-}
-
 func Cancel(id int) {
 	manager.Cancel(id)
 }

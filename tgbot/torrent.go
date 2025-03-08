@@ -26,7 +26,7 @@ func infoTorrent(c tele.Context, magnet string) error {
 	c.Bot().Delete(msg)
 
 	if len(ti.FileStats) == 1 {
-		torr.Add(c, ti.Hash, strconv.Itoa(ti.FileStats[0].Id))
+		torr.AddRange(c, ti.Hash, ti.FileStats[0].Id, ti.FileStats[0].Id)
 		return nil
 	}
 
@@ -73,14 +73,16 @@ func getTorrent(c tele.Context) error {
 		if len(args) != 3 {
 			return errors.New("Ошибка не верные данные")
 		}
-
-		torr.Add(c, args[1], args[2])
+		from, err := strconv.Atoi(args[2])
+		if err != nil {
+			return err
+		}
+		torr.AddRange(c, args[1], from, from)
 	} else if args[0] == "\fall" {
 		if len(args) != 2 {
 			return errors.New("Ошибка не верные данные")
 		}
-
-		torr.AddAll(c, args[1])
+		torr.AddRange(c, args[1], 1, -1)
 	} else {
 		return errors.New("Ошибка не верные данные")
 	}
