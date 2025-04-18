@@ -27,7 +27,7 @@ type TorrFile struct {
 
 func NewTorrFile(wrk *Worker, tfile *state.TorrentFileStat) (*TorrFile, error) {
 	if tfile.Length > 2*1024*1024*1024 {
-		return nil, errors.New("Размер файла должен быть больше 2GB")
+		return nil, errors.New("Размер файла должен быть не больше 2GB")
 	}
 
 	tf := new(TorrFile)

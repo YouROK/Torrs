@@ -192,7 +192,7 @@ func loading(wrk *Worker) {
 
 		err := uploadFile(wrk, file, i+1, len(wrk.ti.FileStats))
 		if err != nil {
-			errstr := fmt.Sprintf("Ошибка загрузки в телеграм: %v", file.Path)
+			errstr := fmt.Sprintf("Ошибка загрузки в телеграм: %v\n\n%v", file.Path, err.Error())
 			wrk.c.Bot().Edit(wrk.msg, errstr)
 			iserr = true
 			break
