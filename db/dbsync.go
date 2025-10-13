@@ -22,11 +22,13 @@ var (
 func StartSync() {
 	for !global.Stopped {
 		syncDB()
-		time.Sleep(time.Minute * 20)
+		time.Sleep(time.Minute * time.Duration(global.DBSync))
 	}
 }
 
 func syncDB() {
+	log.Println("Starting datbase sync from:", global.DBHost)
+
 	mu.Lock()
 	if isSync {
 		mu.Unlock()
@@ -44,11 +46,11 @@ func syncDB() {
 		ftstr := strconv.FormatInt(filetime, 10)
 		t := time.Unix(ft2sec(filetime), 0)
 		log.Println("Fetch:", t.Format("2006-01-02 15:04:05"))
-		resp, err := http.Get("http://62.112.8.193:9117/sync/fdb/torrents?time=" + ftstr)
+		resp, err := http.Get(global.DBHost + "/sync/fdb/torrents?time=" + ftstr)
 		if err != nil {
-			log.Println("Error connect to fdb:", err)
-			log.Println("Waiting 10 minutes before retrying...")
-			time.Sleep(time.Minute * 10)
+			log.Printf("Error connect to fdb(%s): %s\n", global.DBHost, err)
+			log.Printf("Waiting %d minutes before retrying...\n", global.DBSyncRetry)
+			time.Sleep(time.Minute * time.Duration(global.DBSync))
 			continue
 		}
 

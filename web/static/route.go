@@ -40,7 +40,7 @@ func RouteStaticFiles(route *gin.Engine) {
 		etag := fmt.Sprintf("%x", md5.Sum(Filesimgbrowserconfigxml))
 		c.Header("Cache-Control", "public, max-age=31536000")
 		c.Header("ETag", etag)
-		c.Data(200, "application/xml; charset=utf-8", Filesimgbrowserconfigxml)
+		c.Data(200, "text/xml; charset=utf-8", Filesimgbrowserconfigxml)
 	})
 
 	route.GET("/img/copy.svg", func(c *gin.Context) {

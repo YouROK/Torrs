@@ -9,5 +9,9 @@ var (
 	TMDBProxy = false
 	TSHost    = ""
 
+	DBHost      = ""
+	DBSync      = 20
+	DBSyncRetry = 10
+
 	SendFromWeb func(initData, msg string) error
 )

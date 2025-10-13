@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/alexflint/go-arg"
 	"log"
 	"os"
 	"path/filepath"
@@ -9,16 +8,21 @@ import (
 	"torrsru/global"
 	"torrsru/tgbot"
 	"torrsru/web"
+
+	"github.com/alexflint/go-arg"
 )
 
 func main() {
 	var args struct {
-		Port         string `default:"8094" arg:"-p" help:"port for http"`
 		RebuildIndex bool   `default:"false" arg:"-r" help:"rebuild index and exit"`
-		TMDBProxy    bool   `default:"false" arg:"--tmdb" help:"proxy for TMDB"`
-		TGBotToken   string `default:"" arg:"--token" help:"telegram bot token"`
-		TGHost       string `default:"http://127.0.0.1:8081" arg:"--tgapi" help:"telegram api host"`
-		TSHost       string `default:"http://127.0.0.1:8090" arg:"--ts" help:"TorrServer host"`
+		TMDBProxy    bool   `default:"false" arg:"--tmdb,env:TMDB_PROXY" help:"proxy for TMDB"`
+		Port         string `default:"8094" arg:"-p,env:PORT" help:"port for http"`
+		TGBotToken   string `default:"" arg:"--token,env:TG_TOKEN" help:"telegram bot token"`
+		TGHost       string `default:"http://127.0.0.1:8081" arg:"--tgapi,env:TG_HOST" help:"telegram api host"`
+		TSHost       string `default:"http://127.0.0.1:8090" arg:"--ts,env:TS_HOST" help:"TorrServer host"`
+		DBHost       string `default:"http://62.112.8.193:9117" arg:"--db,env:DB_HOST" help:"External sync database host"`
+		DBSync       int    `default:"20" arg:"--db-sync,env:DB_SYNC" help:"External database sync delay"`
+		DBSyncRetry  int    `default:"10" arg:"--db-sync-retry,env:DB_SYNC_RETRY" help:"External database sync retry"`
 	}
 	arg.MustParse(&args)
 
@@ -29,6 +33,10 @@ func main() {
 
 	global.TMDBProxy = args.TMDBProxy
 	global.TSHost = args.TSHost
+
+	global.DBHost = args.DBHost
+	global.DBSync = args.DBSync
+	global.DBSyncRetry = args.DBSyncRetry
 
 	db.Init()
 
