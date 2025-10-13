@@ -1,10 +1,9 @@
 package web
 
 import (
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"embed"
+	"html/template"
 	"log"
-	"path/filepath"
 	"strings"
 	ss "sync"
 	"time"
@@ -12,7 +11,13 @@ import (
 	"torrsru/global"
 	"torrsru/web/api"
 	"torrsru/web/static"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
+
+//go:embed views/*.go.html
+var viewFS embed.FS
 
 func Start(port string) {
 	go db.StartSync()
@@ -27,7 +32,10 @@ func Start(port string) {
 	global.Route = gin.New()
 	global.Route.Use(gin.Recovery(), cors.New(corsCfg), blockUsers())
 	static.RouteStaticFiles(global.Route)
-	global.Route.LoadHTMLGlob(filepath.Join(global.PWD, "views/*.go.html"))
+
+	tmpl := template.Must(template.ParseFS(viewFS, "views/*.go.html"))
+	global.Route.SetHTMLTemplate(tmpl)
+
 	api.SetRoutes(global.Route)
 
 	err := global.Route.Run(":" + port)
